@@ -69,7 +69,6 @@ export default function LoginPage() {
               <br />
             </CardDescription>
           {error && <p className="text-red-500 mt-2">{error}</p>}
-          <Button className="w-full mt-4">
             <motion.button
               animate={{ opacity: 1 }}
               initial={{ opacity: 0 }}
@@ -95,7 +94,6 @@ export default function LoginPage() {
               ) : null}
               {loading ? "Logging in..." : "Login"}
             </motion.button>
-            </Button>
         </CardContent>
       </Card>
     </div>
