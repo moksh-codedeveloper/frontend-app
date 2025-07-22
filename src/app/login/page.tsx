@@ -8,13 +8,13 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import { toast } from "sonner";
-
+import { useRouter } from "next/router";
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-
+  const router = useRouter()
   const login = async (email: string, password: string) => {
     try {
       const csrfToken = await getCsrfToken();
@@ -32,6 +32,7 @@ export default function LoginPage() {
       if (response.status === 201) {
         toast.success("Login successful!");
         setError("");
+        router.push("/dashboard"); // Redirect to dashboard after successful login
       }
     } catch (error: any) {
       toast.error("Login failed: " + (error.response?.data?.message || error.message));
