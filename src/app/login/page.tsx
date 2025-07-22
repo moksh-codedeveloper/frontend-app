@@ -29,7 +29,7 @@ export default function LoginPage() {
           withCredentials: true,
         }
       );
-      if (response.status === 200) {
+      if (response.status === 201) {
         toast.success("Login successful!");
         setError("");
       }
@@ -77,13 +77,9 @@ export default function LoginPage() {
 
             {/* Description */}
             <CardDescription className="mt-4 text-xs text-gray-400 leading-relaxed">
-              Password must have:
-              <br />• Minimum 8 characters
-              <br />• At least 1 uppercase & lowercase letter
-              <br />• At least 1 number & 1 special character
+            {error && <p className="text-red-400 mt-2">{error}</p>}
             </CardDescription>
 
-            {error && <p className="text-red-400 mt-2">{error}</p>}
 
             {/* Submit Button */}
             <motion.button
