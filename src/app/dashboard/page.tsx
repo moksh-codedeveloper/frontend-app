@@ -1,8 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
-
+import { Button } from "@/components/ui/button";
+import {toast} from "sonner";
+import { getCsrfToken } from "@/utils/getCsrfToken";
+import axios from "axios";
 const COLORS = ["#4F46E5", "#EC4899", "#10B981", "#F59E0B"];
 const chartData = [
   { name: "Images", value: 400 },
@@ -12,10 +17,31 @@ const chartData = [
 ];
 
 export default function Dashboard() {
+  const router = useRouter();
   const [progress, setProgress] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
-
+  const [error, setError] = useState("");
+  const logout = async () => {
+    try {
+      const csrfToken = await getCsrfToken();
+      const response = await axios.get("http://localhost:5000/api/auth/logout", {
+        headers: {
+          "X-CSRF-Token" : csrfToken,
+        },
+        withCredentials: true,
+      });
+      if(response.status == 200){
+        toast.success("Logout successful!");
+        router.push("/login")
+        setError("");
+      }
+    } catch (error:any) {
+      toast.error("Logout failed: " + error);
+      setError("Logout failed: " + (error.response?.data?.message || error.message));
+      console.error("Logout error:", error);
+    }
+  }
   const handleFileUpload = (file: File) => {
     setFileName(file.name);
     setUploading(true);
@@ -48,9 +74,10 @@ export default function Dashboard() {
           ))}
         </nav>
         <div className="mt-auto">
-          <button className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-600 transition">
+          {error && (<p className="text-red-500 text-sm mb-4">{error}</p>)}
+          <Button className="w-full py-2 px-4 bg-red-500 rounded-lg hover:bg-red-600 transition" onClick={logout}>
             Logout
-          </button>
+          </Button>
         </div>
       </aside>
 

@@ -8,7 +8,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import { toast } from "sonner";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -29,7 +29,7 @@ export default function LoginPage() {
           withCredentials: true,
         }
       );
-      if (response.status === 201) {
+      if (response.status === 200) {
         toast.success("Login successful!");
         setError("");
         router.push("/dashboard"); // Redirect to dashboard after successful login
