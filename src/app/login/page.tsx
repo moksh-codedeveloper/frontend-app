@@ -2,107 +2,124 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
 import React from "react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import { toast } from "sonner";
-// import { div } from "framer-motion/client";
+
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
+
   const login = async (email: string, password: string) => {
     try {
       const csrfToken = await getCsrfToken();
-      // Step 2: Send login request with CSRF header
       const response = await axios.post(
         "http://localhost:5000/api/auth/login",
         { email, password },
         {
           headers: {
             "Content-Type": "application/json",
-            "X-CSRF-Token": csrfToken, // ✅ CSRF token here
+            "X-CSRF-Token": csrfToken,
           },
-          withCredentials: true, // ✅ Important for cookies
+          withCredentials: true,
         }
       );
-      // Handle successful login
       if (response.status === 200) {
-        // Redirect or show success message
         toast.success("Login successful!");
         setError("");
-        // Optionally, you can redirect the user or update the UI
-        console.log("Login successful");
       }
-    } catch (error: string | any) {
-      console.error("❌ Login error:", error.response?.data || error.message);
+    } catch (error: any) {
       toast.error("Login failed: " + (error.response?.data?.message || error.message));
       setError(error.response?.data?.message || "Login failed");
-      throw new Error(error.response?.data?.message || "Login failed");
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-black text-black">
-      <Card className="w-full max-w-md p-6 bg-violet-400 shadow-lg">
-        <CardHeader className="text-center">
-          <CardTitle>Login</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" />
-          </div>
-          <div className="mt-4 active:bg-amber-300 active:text-black">
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="hover:bg-transparent text-cyan-500 active:bg-amber-300 active:text-black" placeholder="Password" />
-          </div>
-            <CardDescription className="mt-4 text-sm text-red-600">
-              1. Make sure to use the Min length of 8 characters for the password.
-              <br />
-              2. Use a valid email address.
-              <br />
-              3. Include at least 1 lowercase letter, 1 uppercase letter, 1 number, and 1 special character.
-              <br />
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-black">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="w-full max-w-md"
+      >
+        <Card className="backdrop-blur-xl bg-white/10 shadow-2xl border border-white/20 rounded-2xl">
+          <CardHeader className="text-center space-y-1">
+            <CardTitle className="text-3xl font-bold text-white">Welcome Back</CardTitle>
+            <p className="text-gray-300 text-sm">Sign in to continue your journey</p>
+          </CardHeader>
+
+          <CardContent className="p-6">
+            {/* Email Input */}
+            <div>
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="bg-white/20 text-white placeholder-gray-300 border border-white/30 focus:border-indigo-400 focus:ring-indigo-400 transition-all"
+              />
+            </div>
+
+            {/* Password Input */}
+            <div className="mt-4">
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="bg-white/20 text-white placeholder-gray-300 border border-white/30 focus:border-indigo-400 focus:ring-indigo-400 transition-all"
+              />
+            </div>
+
+            {/* Description */}
+            <CardDescription className="mt-4 text-xs text-gray-400 leading-relaxed">
+              Password must have:
+              <br />• Minimum 8 characters
+              <br />• At least 1 uppercase & lowercase letter
+              <br />• At least 1 number & 1 special character
             </CardDescription>
-          {error && <p className="text-red-500 mt-2">{error}</p>}
+
+            {error && <p className="text-red-400 mt-2">{error}</p>}
+
+            {/* Submit Button */}
             <motion.button
-              animate={{ opacity: 1 }}
-              initial={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
               disabled={loading}
-              className="flex items-center justify-center w-full"
               onClick={async (e) => {
-              e.preventDefault();
-              setError("");
-              setLoading(true);
-              try {
-                await login(email, password);
-              } finally {
-                setLoading(false);
-              }
+                e.preventDefault();
+                setError("");
+                setLoading(true);
+                try {
+                  await login(email, password);
+                } finally {
+                  setLoading(false);
+                }
               }}
+              className="mt-6 w-full py-3 rounded-xl font-semibold text-lg text-white 
+                        bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 
+                        hover:from-pink-500 hover:to-indigo-500 shadow-lg shadow-indigo-500/50 
+                        transition-all duration-300 relative overflow-hidden"
             >
               {loading ? (
-              <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-              </svg>
-              ) : null}
-              {loading ? "Logging in..." : "Login"}
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                  </svg>
+                  Logging in...
+                </span>
+              ) : (
+                "Login"
+              )}
             </motion.button>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
-/*
- minLength: 8,
-    minLowercase: 1,
-    minUppercase: 1,
-    minNumbers: 1,
-    minSymbols: 1,
-*/ 
