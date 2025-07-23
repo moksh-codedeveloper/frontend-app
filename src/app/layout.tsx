@@ -35,7 +35,7 @@ export default function RootLayout({
             fontFamily: "var(--font-geist-sans)",
             backdropFilter: "blur(10px)",
             background: "rgba(255,255,255,0.1)",
-            color: "white",
+            color: "black",
             border: "1px solid rgba(255,255,255,0.2)",
           },
         }}
