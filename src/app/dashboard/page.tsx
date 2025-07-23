@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import {toast} from "sonner";
+import FilePages from "../file_upload/page";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import axios from "axios";
 const COLORS = ["#4F46E5", "#EC4899", "#10B981", "#F59E0B"];
@@ -42,21 +43,22 @@ export default function Dashboard() {
       console.error("Logout error:", error);
     }
   }
-  const handleFileUpload = (file: File) => {
-    setFileName(file.name);
-    setUploading(true);
-    setProgress(0);
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setUploading(false);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 300);
-  };
+  // const handleFileUpload = (file: File) => {
+  //   setFileName(file.name);
+  //   setUploading(true);
+  //   setProgress(0);
+  //   const interval = setInterval(() => {
+  //     setProgress((prev) => {
+  //       if (prev >= 100) {
+  //         clearInterval(interval);
+  //         setUploading(false);
+  //         return 100;
+  //       }
+  //       return prev + 10;
+  //     });
+  //   }, 300);
+  // };
+
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-indigo-900 via-purple-900 to-black text-white">
@@ -114,7 +116,7 @@ export default function Dashboard() {
         </div>
 
         {/* Upload Section */}
-        <div className="bg-white/10 backdrop-blur-lg p-8 rounded-xl mb-10">
+        {/* <div className="bg-white/10 backdrop-blur-lg p-8 rounded-xl mb-10">
           <h2 className="text-xl font-bold mb-4">Upload Files</h2>
           <div
             className="border-2 border-dashed border-gray-400 rounded-lg p-10 text-center cursor-pointer hover:border-indigo-400"
@@ -143,8 +145,8 @@ export default function Dashboard() {
               <p className="mt-2">{progress}%</p>
             </div>
           )}
-        </div>
-
+        </div> */}
+          <FilePages/>
         {/* Analytics Chart */}
         <div className="bg-white/10 backdrop-blur-lg p-8 rounded-xl">
           <h2 className="text-xl font-bold mb-6">File Type Distribution</h2>
