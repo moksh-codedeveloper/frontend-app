@@ -8,7 +8,7 @@ import { AxiosError } from "axios"; // Import AxiosError for better type safety
 
 // Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME, // Ensure these are public for client-side usage if any, otherwise just CLOUDINARY_CLOUD_NAME
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // Ensure these are public for client-side usage if any, otherwise just CLOUDINARY_CLOUD_NAME
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
@@ -40,9 +40,9 @@ async function getUserIdFromBackend(): Promise<string> {
     }
 
     const token = tokenCookie.value;
-    const backendApiUrl = process.env.NODE_BACKEND_URL || "http://localhost:5000"; // Your backend base URL
+    const backendApiUrl = "http://localhost:5000/api/auth/"; // Your backend base URL
 
-    const response = await axios.get<BackendProfileResponse>(`${backendApiUrl}/profile`, {
+    const response = await axios.get<BackendProfileResponse>(`${backendApiUrl}profile`, {
       headers: {
         // CORRECTED: Ensure 'Cookie' header is sent correctly
         'Cookie': `token=${token}`,
