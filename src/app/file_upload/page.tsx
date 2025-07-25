@@ -1,30 +1,34 @@
 /* eslint-disable @next/next/no-img-element */
 // app/dashboard/file_upload_section.tsx
 "use client";
-import React, { useState, useCallback } from "react"; // Added useCallback
-import axios, { AxiosError } from "axios"; // Added AxiosError
+import React, { useState, useCallback, useEffect } from "react";
+import axios, { AxiosError } from "axios";
 import { toast } from "sonner";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card"; // Added CardHeader, CardTitle
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-
+import { getCsrfToken, setupAxiosInterceptors } from "@/utils/getCsrfToken";
 
 interface FileUploadSectionProps {
-  onUploadSuccess: () => void; // This is the prop your dashboard will pass
+  onUploadSuccess: () => void;
 }
 
 interface FileWithProgress {
   file: File;
   progress: number;
-  id: string; // Add a unique ID for better keying
+  id: string;
 }
 
-// Rename the component and accept the props
 export default function FileUploadSection({ onUploadSuccess }: FileUploadSectionProps) {
   const [files, setFiles] = useState<FileWithProgress[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [globalProgress, setGlobalProgress] = useState(0); // For overall progress if uploading multiple
-  const [error, setError] = useState<string | null>(null); // For upload-specific errors
+  const [globalProgress, setGlobalProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+
+  // Setup axios interceptors on component mount
+  useEffect(() => {
+    setupAxiosInterceptors();
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -32,7 +36,7 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     const droppedFiles = Array.from(e.dataTransfer.files).map((file) => ({
       file,
       progress: 0,
-      id: `${file.name}-${file.lastModified}-${Math.random()}`, // Simple unique ID
+      id: `${file.name}-${file.lastModified}-${Math.random()}`,
     }));
     setFiles((prev) => [...prev, ...droppedFiles]);
   }, []);
@@ -42,10 +46,9 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     const selectedFiles = Array.from(e.target.files || []).map((file) => ({
       file,
       progress: 0,
-      id: `${file.name}-${file.lastModified}-${Math.random()}`, // Simple unique ID
+      id: `${file.name}-${file.lastModified}-${Math.random()}`,
     }));
     setFiles((prev) => [...prev, ...selectedFiles]);
-    // Clear input value to allow selecting same files again
     if (e.target) e.target.value = '';
   }, []);
 
@@ -56,16 +59,16 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     }
 
     setUploading(true);
-    setGlobalProgress(0); // Reset global progress
+    setGlobalProgress(0);
     setError(null);
 
     const formData = new FormData();
     const MAX_INDIVIDUAL_SIZE = 20 * 1024 * 1024; // 20MB limit
-    const MAX_TOTAL_FILES = 5; // Example: Limit concurrent uploads
-    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // Example: 100MB total limit
+    const MAX_TOTAL_FILES = 5;
+    const MAX_TOTAL_SIZE = 100 * 1024 * 1024; // 100MB total limit
     let currentTotalSize = 0;
 
-    // Client-side validation before sending
+    // Client-side validation
     const validFiles: FileWithProgress[] = [];
     for (let i = 0; i < files.length; i++) {
         const item = files[i];
@@ -92,28 +95,32 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
 
     validFiles.forEach((item) => formData.append("files", item.file));
 
-    const loadingToastId = toast.loading("Preparing files for upload..."); // Start with a preparing message
+    const loadingToastId = toast.loading("Preparing files for upload...");
 
     try {
+      // Get CSRF token before making the request
+      const csrfToken = await getCsrfToken();
+      console.log('Using CSRF token for upload:', csrfToken?.substring(0, 20) + '...');
+
       await axios.post("/api/cloudinary_upload", formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'X-CSRF-Token': csrfToken, // Include CSRF token
         },
         withCredentials: true,
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {
             const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setGlobalProgress(percent); // Update global progress bar
-            // Optionally, update individual file progress here if you want
+            setGlobalProgress(percent);
           }
         },
       });
 
       toast.dismiss(loadingToastId);
       toast.success("All files uploaded and analyzed successfully!");
-      setFiles([]); // Clear files after successful upload
-      setGlobalProgress(0); // Reset progress
-      onUploadSuccess(); // Call the callback from the parent (Dashboard) to re-fetch files
+      setFiles([]);
+      setGlobalProgress(0);
+      onUploadSuccess();
     } catch (err) {
       toast.dismiss(loadingToastId);
       setUploading(false);
@@ -131,11 +138,11 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     } finally {
       setUploading(false);
     }
-  }, [files, onUploadSuccess]); // Dependencies for useCallback
+  }, [files, onUploadSuccess]);
 
   const handleRemoveFile = useCallback((id: string) => {
     setFiles(prev => prev.filter(file => file.id !== id));
-    setError(null); // Clear any file-specific errors when a file is removed
+    setError(null);
   }, []);
 
   return (
@@ -199,7 +206,6 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
                             onClick={() => handleRemoveFile(item.id)}
                             className="text-gray-400 hover:text-red-500"
                         >
-                            {/* You'll need an X icon, e.g., from Lucide React: <X className="h-4 w-4" /> */}
                             X 
                         </Button>
                     </Card>

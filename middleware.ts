@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register"]; // Routes accessible without authentication
-const PROTECTED_ROUTE_PREFIXES = ["/dashboard", "/files", "/settings", "/profile"]; // Routes that explicitly require authentication
+const PROTECTED_ROUTE_PREFIXES = ["/dashboard", "/file_upload", "/profile"]; // Routes that explicitly require authentication
 
 // Helper function to check if a route is protected
 function isProtectedRoute(path: string): boolean {

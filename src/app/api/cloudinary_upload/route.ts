@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import axios from "axios";
-import type { NextRequest } from "next/server"; // Ensure NextRequest is imported
+import type { NextRequest } from "next/server";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -27,18 +27,14 @@ export async function POST(request: NextRequest) {
     // --- Get the userId by calling your own Next.js API route (/api/user/get-id) ---
     let userId: string;
     try {
-        // Hardcode Next.js app URL for simplicity during development.
         const nextjsApiBaseUrl = "http://localhost:3000";
         const getUserIdApiUrl = `${nextjsApiBaseUrl}/api/user/get-id`;
 
         const userResponse = await axios.get<{ userId: string; message: string }>(
             getUserIdApiUrl,
             {
-                // Forward original request's cookies and headers to /api/user/get-id
-                // This is how /api/user/get-id will get the 'token' cookie
                 headers: {
                     'Cookie': request.headers.get('Cookie') || '',
-                    'X-CSRF-Token': request.headers.get('X-CSRF-Token') || '', // Forward CSRF if present
                 },
                 withCredentials: true,
                 validateStatus: (status) => status >= 200 && status < 500,
@@ -66,6 +62,7 @@ export async function POST(request: NextRequest) {
 
     const uploadFolder = `user_files/${userId}`;
 
+    // Upload files to Cloudinary
     for (const file of files) {
       if (file.size > MAX_SIZE) {
         return NextResponse.json(
@@ -99,13 +96,22 @@ export async function POST(request: NextRequest) {
     }
 
     // --- Call Node.js backend to save file metadata ---
-    // Hardcode backend URL for simplicity during development.
     const backendApiUrl = "http://localhost:5000";
     try {
-        const csrfToken = request.headers.get('X-CSRF-Token'); // Get CSRF token from original frontend request
+        // Get CSRF token from the original request
+        const csrfToken = request.headers.get('X-CSRF-Token');
+        
+        if (!csrfToken) {
+            console.error("No CSRF token found in request headers");
+            return NextResponse.json({ 
+              message: "CSRF token required for file metadata saving" 
+            }, { status: 403 });
+        }
+
+        console.log("Using CSRF token for backend call:", csrfToken.substring(0, 20) + "...");
 
         const saveResponse = await axios.post(
-            `${backendApiUrl}/api/files/save`, // Your Node.js backend endpoint
+            `${backendApiUrl}/api/files/save`,
             {
                 userId: userId,
                 files: uploadedFilesData.map(file => ({
@@ -118,7 +124,9 @@ export async function POST(request: NextRequest) {
             {
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRF-Token': csrfToken || '', // Crucial: Send CSRF token for POST requests
+                    'X-CSRF-Token': csrfToken,
+                    // Forward cookies if needed for backend authentication
+                    'Cookie': request.headers.get('Cookie') || '',
                 },
                 withCredentials: true,
                 validateStatus: (status) => status >= 200 && status < 500,
@@ -127,20 +135,46 @@ export async function POST(request: NextRequest) {
 
         if (saveResponse.status !== 200) {
             console.error("Backend failed to save file metadata:", saveResponse.status, saveResponse.data);
-            return NextResponse.json({ message: "Files uploaded, but failed to save metadata to database." }, { status: 500 });
+            return NextResponse.json({ 
+              message: "Files uploaded to Cloudinary, but failed to save metadata to database.",
+              files: uploadedFilesData // Still return the uploaded files
+            }, { status: 500 });
         }
+
+        console.log("File metadata saved successfully to backend");
 
     } catch (saveError) {
         let saveErrorMessage = "Failed to communicate with backend to save file metadata.";
         let statusCode = 500;
+        
         if (axios.isAxiosError(saveError)) {
             saveErrorMessage = saveError.response?.data?.message || saveError.message;
             statusCode = saveError.response?.status || 500;
+            
+            // Log detailed error for debugging
+            console.error("Backend save error details:", {
+                status: saveError.response?.status,
+                data: saveError.response?.data,
+                headers: saveError.response?.headers
+            });
         } else if (saveError instanceof Error) {
             saveErrorMessage = saveError.message;
         }
+        
         console.error("Error saving file metadata to backend:", saveErrorMessage);
-        return NextResponse.json({ message: `Files uploaded, but an error occurred saving metadata: ${saveErrorMessage}` }, { status: statusCode });
+        
+        // If it's a CSRF error, return more specific message
+        if (statusCode === 403 && saveErrorMessage.includes('CSRF')) {
+            return NextResponse.json({ 
+              message: "CSRF token validation failed. Please refresh and try again.",
+              files: uploadedFilesData // Still return the uploaded files
+            }, { status: 403 });
+        }
+        
+        return NextResponse.json({ 
+          message: `Files uploaded to Cloudinary, but metadata save failed: ${saveErrorMessage}`,
+          files: uploadedFilesData // Still return the uploaded files
+        }, { status: statusCode });
     }
 
     return NextResponse.json({
@@ -148,16 +182,20 @@ export async function POST(request: NextRequest) {
       message: "Files uploaded and metadata saved successfully",
       files: uploadedFilesData,
     });
+    
   } catch (error) {
     let errorMessage = "Internal Server Error";
     let statusCode = 500;
+    
     if (axios.isAxiosError(error)) {
         errorMessage = error.response?.data?.message || error.message;
         statusCode = error.response?.status || 500;
     } else if (error instanceof Error) {
         errorMessage = error.message;
     }
+    
     console.error("Upload process error:", errorMessage);
+    
     return NextResponse.json(
       { message: errorMessage },
       { status: statusCode }
