@@ -95,7 +95,7 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     const loadingToastId = toast.loading("Preparing files for upload..."); // Start with a preparing message
 
     try {
-      await axios.post("/cloudinary_upload", formData, {
+      await axios.post("/api/cloudinary_upload", formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },

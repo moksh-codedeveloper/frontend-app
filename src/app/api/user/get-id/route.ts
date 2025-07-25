@@ -1,7 +1,7 @@
 // app/api/user/get-id/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
-import axios from "axios"; // Ensure Axios and AxiosError are imported
+import axios from "axios";
 
 // Define expected backend response types
 interface BackendUserProfile {
@@ -10,28 +10,26 @@ interface BackendUserProfile {
   name?: string;
 }
 
-interface BackendProfileResponse {
-  user: BackendUserProfile;
-}
-
-// This is the GET handler for /api/user/get-id
-export async function GET() { // It's a GET request, so export GET
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(request: NextRequest) { // Ensure NextRequest is imported here for headers
   try {
     const cookieStore = await cookies();
     const tokenCookie = cookieStore.get("token");
 
     if (!tokenCookie) {
-      // Changed to NextResponse.json as this is now a full API route
       return NextResponse.json({ message: "Authentication token missing." }, { status: 401 });
     }
 
     const token = tokenCookie.value;
+    // Hardcode backend URL for simplicity during development.
+    const backendApiUrl = "http://localhost:5000";
 
-    const response = await axios.get<BackendProfileResponse | { message: string }>(
-      "http://localhost:5000/api/auth/profile", // The correct backend profile endpoint
+    const response = await axios.get<BackendUserProfile | { message: string }>(
+      `${backendApiUrl}/api/auth/profile`, // Calls your Node.js backend's profile endpoint
       {
         headers: {
-          'Cookie': `token=${token}`,
+          'Cookie': `token=${token}`, // Send the 'token' cookie to your backend
+          // No X-CSRF-Token header needed here, as it's a GET request
         },
         withCredentials: true,
         validateStatus: (status) => status >= 200 && status < 500
@@ -47,10 +45,10 @@ export async function GET() { // It's a GET request, so export GET
       );
     }
 
-    const userProfile = (response.data as BackendProfileResponse).user;
+    const userProfile = (response.data as unknown as { user: BackendUserProfile }).user;
 
     return NextResponse.json({
-      message: "User ID fetched successfully", // Added a success message
+      message: "User ID fetched successfully",
       userId: userProfile.id,
       user: userProfile
     }, { status: 200 });
@@ -63,7 +61,7 @@ export async function GET() { // It's a GET request, so export GET
       statusCode = error.response?.status || 500;
     } else if (error instanceof Error) {
       errorMessage = error.message;
-      if (errorMessage.includes("Authentication token missing")) { // Specific check for the error thrown above
+      if (errorMessage.includes("Authentication token missing")) {
          statusCode = 401;
       }
     }
