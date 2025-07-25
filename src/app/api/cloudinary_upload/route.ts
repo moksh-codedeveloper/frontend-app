@@ -1,77 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { NextRequest, NextResponse } from "next/server";
+// app/api/cloudinary_upload/route.ts
+import { NextResponse, NextRequest } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
-import { cookies } from "next/headers";
-import axios from "axios"; // Using axios as per your original code, but fetch is often preferred for server-side
-import { AxiosError } from "axios"; // Import AxiosError for better type safety
+import axios from "axios"; // Ensure Axios and AxiosError are imported
 
-// Configure Cloudinary
 cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME, // Ensure these are public for client-side usage if any, otherwise just CLOUDINARY_CLOUD_NAME
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
-
-// Define expected backend response types
-interface BackendUserProfile {
-  id: string;
-  email: string;
-  name?: string;
-}
-
-interface BackendProfileResponse {
-  message: string;
-  user: BackendUserProfile;
-}
-
-/**
- * Helper function to fetch the userId from the backend using the token cookie.
- * This function returns the userId directly or throws an error.
- */
-async function getUserIdFromBackend(): Promise<string> {
-  try {
-    const cookieStore = await cookies();
-    const tokenCookie = cookieStore.get("token"); // Get the 'token' cookie
-
-    if (!tokenCookie) {
-      throw new Error("Authentication token missing.");
-    }
-
-    const token = tokenCookie.value;
-    const backendApiUrl = "http://localhost:5000/api/auth/"; // Your backend base URL
-
-    const response = await axios.get<BackendProfileResponse>(`${backendApiUrl}profile`, {
-      headers: {
-        // CORRECTED: Ensure 'Cookie' header is sent correctly
-        'Cookie': `token=${token}`,
-      },
-    });
-
-    if (response.status !== 200) {
-      // Axios throws for 4xx/5xx by default if validateStatus is not set,
-      // but explicitly checking helps.
-      console.error("Backend /profile error response:", response.status, response.data);
-      throw new Error(response.data.message || "Failed to fetch user profile from backend.");
-    }
-
-    const userId = response.data.user.id;
-    return userId;
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      // More specific error handling for Axios errors
-      console.error("Axios error getting user ID:", error.response?.status, error.response?.data);
-      throw new Error(`Failed to get user ID: ${error.response?.data?.message || error.message}`);
-    } else if (error instanceof Error) {
-      console.error("General error getting user ID:", error.message);
-      throw new Error(`Failed to get user ID: ${error.message}`);
-    } else {
-      console.error("Unknown error getting user ID:", error);
-      throw new Error("Failed to get user ID due to an unknown error.");
-    }
-  }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,23 +22,44 @@ export async function POST(request: NextRequest) {
     }
 
     const MAX_SIZE = 20 * 1024 * 1024; // 20MB limit
-    const results: { url: string; public_id: string }[] = [];
 
-    // Attempt to get the userId before processing files
+    // --- NEW: Get the userId by calling your own Next.js API route ---
     let userId: string;
     try {
-      userId = await getUserIdFromBackend();
-    } catch (error: any) {
-      // If unable to get userId, return an unauthorized/error response
-      console.error("Error getting userId for upload:", error.message);
-      return NextResponse.json(
-        { message: error.message || "Authentication required for upload." },
-        { status: 401 }
-      );
-    }
+        // Call your own Next.js API route /api/user/get-id
+        // This route will handle reading the 'token' cookie and proxying to your Node.js backend
+        const userResponse = await axios.get<{ userId: string; message: string }>(
+            `/api/user/get-id`,
+            {
+                headers: {
+                    'Cookie': request.headers.get('token') || '',
+                },
+                withCredentials: true, // Important for Axios to send cookies to your own domain
+                validateStatus: (status) => status >= 200 && status < 500, // Don't throw on 4xx errors
+            }
+        );
 
-    // Now userId is available for use in the folder path
-    const uploadFolder = `uploads/${userId}`;
+        if (userResponse.status !== 200) {
+            const errorData = userResponse.data as { message: string };
+            throw new Error(errorData.message || "Failed to get user ID for upload from internal API.");
+        }
+        userId = userResponse.data.userId;
+
+    } catch (error) {
+        let errorMessage = "Authentication required for upload: An error occurred getting user ID.";
+        let statusCode = 401; // Default to 401 if auth fails
+        if (axios.isAxiosError(error)) {
+            errorMessage = error.response?.data?.message || error.message;
+            statusCode = error.response?.status || 401;
+        } else if (error instanceof Error) {
+            errorMessage = error.message;
+        }
+        console.error("Error getting userId for upload (from /api/user/get-id proxy):", errorMessage);
+        return NextResponse.json({ message: errorMessage }, { status: statusCode });
+    }
+    // --- END NEW ---
+
+    const uploadFolder = `uploads/${userId}`; // Dynamic folder per user
 
     for (const file of files) {
       if (file.size > MAX_SIZE) {
@@ -113,9 +73,9 @@ export async function POST(request: NextRequest) {
 
       const uploadResult: any = await new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { 
-            folder: uploadFolder, // Use the dynamically created folder
-            // Add other options here if needed, e.g., resource_type: "auto"
+          {
+            folder: uploadFolder,
+            resource_type: "auto",
           },
           (error, result) => {
             if (error) reject(error);
@@ -124,23 +84,24 @@ export async function POST(request: NextRequest) {
         );
         stream.end(buffer);
       });
-
-      results.push({
-        url: uploadResult.secure_url,
-        public_id: uploadResult.public_id,
-      });
     }
-
     return NextResponse.json({
       status: 200,
-      message: "Files uploaded successfully",
-      files: results,
+      message: "Files uploaded and metadata saved successfully",
     });
-  } catch (error: any) {
-    console.error("Global upload error:", error); // Log the full error
+  } catch (error) {
+    let errorMessage = "Internal Server Error";
+    let statusCode = 500;
+    if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || error.message;
+        statusCode = error.response?.status || 500;
+    } else if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+    console.error("Upload process error:", errorMessage);
     return NextResponse.json(
-      { message: error.message || "Internal Server Error" },
-      { status: 500 }
+      { message: errorMessage },
+      { status: statusCode }
     );
   }
 }

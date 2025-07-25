@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card"; // Added CardHeader, CardTitle
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { getCsrfToken } from "@/utils/getCsrfToken"; // Import CSRF token utility
+
 
 interface FileUploadSectionProps {
   onUploadSuccess: () => void; // This is the prop your dashboard will pass
@@ -95,12 +95,9 @@ export default function FileUploadSection({ onUploadSuccess }: FileUploadSection
     const loadingToastId = toast.loading("Preparing files for upload..."); // Start with a preparing message
 
     try {
-      const csrfToken = await getCsrfToken(); // Fetch CSRF token
-
       await axios.post("/api/cloudinary_upload", formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'X-CSRF-Token': csrfToken, // Pass CSRF token
         },
         onUploadProgress: (progressEvent) => {
           if (progressEvent.total) {

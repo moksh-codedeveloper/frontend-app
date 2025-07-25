@@ -26,10 +26,9 @@ export async function GET() { // It's a GET request, so export GET
     }
 
     const token = tokenCookie.value;
-    const backendApiUrl = process.env.NODE_BACKEND_URL || "http://localhost:5000";
 
     const response = await axios.get<BackendProfileResponse | { message: string }>(
-      `${backendApiUrl}/api/auth/profile`, // The correct backend profile endpoint
+      "http://localhost:5000/api/auth/profile", // The correct backend profile endpoint
       {
         headers: {
           'Cookie': `token=${token}`,
