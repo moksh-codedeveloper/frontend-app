@@ -1,58 +1,83 @@
-// app/api/user/get-id/route.ts
+// app/api/user/get-id/route.ts - Fixed version
 import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
 
-// Define expected backend response types
 interface BackendUserProfile {
   id: string;
   email: string;
   name?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export async function GET(request: NextRequest) { // Ensure NextRequest is imported here for headers
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const tokenCookie = cookieStore.get("token");
 
     if (!tokenCookie) {
-      return NextResponse.json({ message: "Authentication token missing." }, { status: 401 });
+      return NextResponse.json(
+        { message: "Authentication token missing." },
+        { status: 401 }
+      );
     }
 
     const token = tokenCookie.value;
-    // Hardcode backend URL for simplicity during development.
     const backendApiUrl = "http://localhost:5000";
 
+    // Method 1: Use Authorization header (RECOMMENDED)
     const response = await axios.get<BackendUserProfile | { message: string }>(
-      `${backendApiUrl}/api/auth/profile`, // Calls your Node.js backend's profile endpoint
+      `${backendApiUrl}/api/auth/profile`,
       {
         headers: {
-          'Cookie': `token=${token}`, // Send the 'token' cookie to your backend
-          // No X-CSRF-Token header needed here, as it's a GET request
+          Authorization: `Bearer ${token}`, // ✅ Use Authorization header
+        },
+        withCredentials: true,
+        validateStatus: (status) => status >= 200 && status < 500,
+      }
+    );
+
+    // Method 2: If you want to keep using cookies, forward ALL cookies
+    /*
+    const response = await axios.get<BackendUserProfile | { message: string }>(
+      `${backendApiUrl}/api/auth/profile`,
+      {
+        headers: {
+          'Cookie': request.headers.get('cookie') || `token=${token}`, // Forward all cookies
         },
         withCredentials: true,
         validateStatus: (status) => status >= 200 && status < 500
       }
     );
+    */
 
     if (response.status !== 200) {
       const errorData = response.data as { message: string };
-      console.error("Backend /profile error response:", response.status, errorData);
+      console.error(
+        "Backend /profile error response:",
+        response.status,
+        errorData
+      );
       return NextResponse.json(
-        { message: errorData.message || "Failed to fetch user profile from backend." },
+        {
+          message:
+            errorData.message || "Failed to fetch user profile from backend.",
+        },
         { status: response.status }
       );
     }
 
-    const userProfile = (response.data as unknown as { user: BackendUserProfile }).user;
+    const userProfile = (
+      response.data as unknown as { user: BackendUserProfile }
+    ).user;
 
-    return NextResponse.json({
-      message: "User ID fetched successfully",
-      userId: userProfile.id,
-      user: userProfile
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        message: "User ID fetched successfully",
+        userId: userProfile.id,
+        user: userProfile,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     let errorMessage = "An unknown error occurred while fetching user ID.";
     let statusCode = 500;
@@ -62,13 +87,10 @@ export async function GET(request: NextRequest) { // Ensure NextRequest is impor
     } else if (error instanceof Error) {
       errorMessage = error.message;
       if (errorMessage.includes("Authentication token missing")) {
-         statusCode = 401;
+        statusCode = 401;
       }
     }
     console.error("Error in /api/user/get-id route:", errorMessage);
-    return NextResponse.json(
-      { message: errorMessage },
-      { status: statusCode }
-    );
+    return NextResponse.json({ message: errorMessage }, { status: statusCode });
   }
 }

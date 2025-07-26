@@ -1,12 +1,10 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// middleware.ts
+// middleware.ts - Fixed version
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PUBLIC_ROUTES = ["/", "/login", "/register"]; // Routes accessible without authentication
-const PROTECTED_ROUTE_PREFIXES = ["/dashboard", "/file_upload", "/profile"]; // Routes that explicitly require authentication
+const PUBLIC_ROUTES = ["/", "/login", "/register"];
+const PROTECTED_ROUTE_PREFIXES = ["/dashboard", "/file_upload", "/profile"];
 
-// Helper function to check if a route is protected
 function isProtectedRoute(path: string): boolean {
   return PROTECTED_ROUTE_PREFIXES.some(prefix => path.startsWith(prefix));
 }
@@ -26,11 +24,8 @@ export async function middleware(req: NextRequest) {
     isProtectedRoute: isProtectedRoute(path)
   });
 
-  // --- Core Logic Flow ---
-
-  // 1. Allow public routes without any checks (including home page)
+  // 1. Allow public routes
   if (PUBLIC_ROUTES.includes(path)) {
-    // But if user is authenticated and trying to access login/register, redirect to dashboard
     if (accessToken && (path === "/login" || path === "/register")) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
@@ -39,18 +34,15 @@ export async function middleware(req: NextRequest) {
 
   // 2. For protected routes - enforce authentication
   if (isProtectedRoute(path)) {
-    // If no tokens at all, redirect to login
     if (!accessToken && !refreshToken) {
       console.log("No tokens found, redirecting to login");
       return NextResponse.redirect(new URL("/login", req.url));
     }
 
-    // If we have an access token, check if it's valid
     if (accessToken) {
       const isExpired = isJwtExpired(accessToken);
       
       if (!isExpired) {
-        // Access token is valid, allow access
         console.log("Access token is valid, proceeding");
         return NextResponse.next();
       }
@@ -58,21 +50,21 @@ export async function middleware(req: NextRequest) {
       console.log("Access token is expired, attempting refresh");
     }
 
-    // If access token is missing or expired, try to refresh using refresh token
+    // Token refresh with proper cookie handling
     if (refreshToken) {
       try {
         console.log("Attempting token refresh...");
         
-        // Create the backend URL - make sure this matches your backend
         const backendRefreshTokenUrl = process.env.NODE_ENV === 'production' 
           ? `${process.env.NEXT_PUBLIC_API_URL}/api/auth/refreshToken`
           : "http://localhost:5000/api/auth/refreshToken";
 
+        // ✅ Fixed: Forward ALL cookies instead of just refreshToken
         const refreshResponse = await fetch(backendRefreshTokenUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Cookie': `refreshToken=${refreshToken}`,
+            'Cookie': req.headers.get('cookie') || '', // Forward all cookies
           },
         });
 
@@ -84,11 +76,9 @@ export async function middleware(req: NextRequest) {
           throw new Error(`Refresh failed with status: ${refreshResponse.status}`);
         }
 
-        // Parse the response to get new tokens
         const refreshData = await refreshResponse.json();
         console.log("Refresh successful, got new tokens");
 
-        // Create response and set new cookies with proper configuration
         const response = NextResponse.next();
         
         const cookieOptions = {
@@ -98,31 +88,25 @@ export async function middleware(req: NextRequest) {
           path: '/',
         };
         
-        // Set new access token
         if (refreshData.accessToken) {
           response.cookies.set("token", refreshData.accessToken, {
             ...cookieOptions,
-            maxAge: 15 * 60, // 15 minutes
+            maxAge: 15 * 60,
           });
-          console.log("Set new access token in middleware");
         }
 
-        // Set new refresh token if provided
         if (refreshData.refreshToken) {
           response.cookies.set("refreshToken", refreshData.refreshToken, {
             ...cookieOptions,
-            maxAge: 7 * 24 * 60 * 60, // 7 days
+            maxAge: 7 * 24 * 60 * 60,
           });
-          console.log("Set new refresh token in middleware");
         }
 
-        console.log("New tokens set in cookies, proceeding with request");
         return response;
 
       } catch (error) {
         console.error("Token refresh failed:", error);
         
-        // Clear invalid tokens and redirect to login
         const loginResponse = NextResponse.redirect(new URL("/login", req.url));
         loginResponse.cookies.delete("token");
         loginResponse.cookies.delete("refreshToken");
@@ -137,12 +121,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // 3. For all other routes (neither public nor explicitly protected)
-  // Allow access but don't enforce authentication
   return NextResponse.next();
 }
 
-// Helper function to check JWT expiry
+// Helper function remains the same
 function isJwtExpired(token?: string): boolean {
   if (!token) return true;
   
@@ -155,7 +137,6 @@ function isJwtExpired(token?: string): boolean {
 
     const [, payloadBase64] = parts;
     
-    // Add padding if needed for base64 decoding
     const paddedPayload = payloadBase64.padEnd(
       payloadBase64.length + (4 - (payloadBase64.length % 4)) % 4, 
       '='
@@ -184,14 +165,6 @@ function isJwtExpired(token?: string): boolean {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api (API routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public files (images, etc.)
-     */
     '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot)$).*)',
   ],
 };
