@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // app/dashboard/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
@@ -5,48 +6,102 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 // Import simple icons instead of complex ones or images
-import { UserCircleIcon, CloudArrowUpIcon, DocumentTextIcon, ArrowLeftEndOnRectangleIcon } from '@heroicons/react/24/outline'; // Example icons
+import { UserCircleIcon, CloudArrowUpIcon, DocumentTextIcon, ArrowLeftEndOnRectangleIcon } from '@heroicons/react/24/outline';
 
 // Assuming these are properly imported or defined
-import { Button } from "@/components/ui/button"; // Assuming shadcn/ui or similar button
-import FileUploadSection from "../file_upload/page"; // Your file upload component
+import { Button } from "@/components/ui/button";
+import FileUploadSection from "../file_upload/page";
 
-import { getCsrfToken } from "@/utils/getCsrfToken"; // Your CSRF token utility
 
 // Define interfaces for data fetched from backend
 interface UserProfile {
   id: string;
   email: string;
-  name?: string; // Optional name
+  name?: string;
 }
-
-// We're removing UserFile and related states for now as the API is not ready
-// interface UserFile {
-//   id: string;
-//   name: string;
-//   url: string;
-//   isMalicious: boolean;
-//   uploadDate: string;
-// }
 
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
-  // const [files, setFiles] = useState<UserFile[]>([]); // Removed: No file list API yet
   const [loadingUser, setLoadingUser] = useState(true);
-  // const [loadingFiles, setLoadingFiles] = useState(true); // Removed: No file list API yet
   const [loadingLogout, setLoadingLogout] = useState(false);
-  const [error, setError] = useState<string | null>(null); // For general dashboard errors
+  const [error, setError] = useState<string | null>(null);
+  // --- Token Refresh Function ---
+  const refreshToken = useCallback(async (): Promise<boolean> => {
+    try {
+      console.log("🔄 Attempting token refresh...");
+      const response = await axios.post("http://localhost:5000/api/auth/refreshToken", {}, {
+        withCredentials: true,
+      });
+
+      if (response.status === 200) {
+        console.log("✅ Token refresh successful");
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("❌ Token refresh failed:", error);
+      return false;
+    }
+  }, []);
+
+  // --- Enhanced API Call with Auto-Retry ---
+  const makeAuthenticatedRequest = useCallback(
+    async function<T>(
+      requestFn: () => Promise<T>,
+      maxRetries: number = 1
+    ): Promise<T> {
+      let lastError: Error;
+
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          return await requestFn();
+        } catch (err) {
+          const axiosError = err as AxiosError;
+          lastError = axiosError;
+
+          // If it's a 401/403 (token expired) and we haven't exhausted retries
+          if ((axiosError.response?.status === 401 || axiosError.response?.status === 403) && attempt < maxRetries) {
+            console.log(`🔄 Token expired, attempting refresh (attempt ${attempt + 1}/${maxRetries + 1})`);
+            
+            const refreshSuccess = await refreshToken();
+            if (refreshSuccess) {
+              console.log("✅ Token refreshed, retrying request...");
+              continue; // Retry the request
+            } else {
+              console.log("❌ Token refresh failed, redirecting to login");
+              toast.error("Session expired. Please log in again.");
+              router.push("/login");
+              throw new Error("Token refresh failed");
+            }
+          }
+          
+          // If it's not an auth error, or we've exhausted retries, throw the error
+          throw axiosError;
+        }
+      }
+
+      throw lastError!;
+    },
+    [refreshToken, router]
+  );
 
   // --- Data Fetching Functions ---
-
   const fetchUserProfile = useCallback(async () => {
     setLoadingUser(true);
     setError(null);
+    
     try {
-      const response = await axios.get<{
-        message: string; userId: string; user: UserProfile 
-}>("/api/user/get-id");
+      const response = await makeAuthenticatedRequest(async () => {
+        return await axios.get<{
+          message: string; 
+          userId: string; 
+          user: UserProfile 
+        }>("/api/user/get-id", {
+          withCredentials: true,
+        });
+      });
+
       if (response.status === 200 && response.data.user) {
         setUser(response.data.user);
       } else {
@@ -54,26 +109,25 @@ export default function Dashboard() {
       }
     } catch (err) {
       const axiosError = err as AxiosError;
-      const errorMessage =
-        (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
-          ? (axiosError.response.data as { message?: string }).message
-          : undefined)
-        || axiosError.message
-        || "An unexpected error occurred.";
-      setError(`Failed to load user profile: ${errorMessage}`);
-      toast.error(`Failed to load user: ${errorMessage}`);
+      
+      // Don't show error if we're redirecting to login
+      if (axiosError.message !== "Token refresh failed") {
+        const errorMessage =
+          (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
+            ? (axiosError.response.data as { message?: string }).message
+            : undefined)
+          || axiosError.message
+          || "An unexpected error occurred.";
+        
+        setError(`Failed to load user profile: ${errorMessage}`);
+        toast.error(`Failed to load user: ${errorMessage}`);
+      }
     } finally {
       setLoadingUser(false);
     }
-  }, []);
-
-  // Removed fetchUserFiles and related useEffect call as there's no API for file listing yet
-  // const fetchUserFiles = useCallback(async () => { ... }, [user?.id]);
-  // useEffect(() => { if (user) { fetchUserFiles(); } }, [user, fetchUserFiles]);
+  }, [makeAuthenticatedRequest]);
 
   // --- Effects ---
-
-  // Fetch user profile on component mount
   useEffect(() => {
     fetchUserProfile();
   }, [fetchUserProfile]);
@@ -82,44 +136,46 @@ export default function Dashboard() {
   const handleLogout = async () => {
     setLoadingLogout(true);
     try {
-      const csrfToken = await getCsrfToken();
-      const backendLogoutUrl = "http://localhost:5000/api/auth/logout";
-
-      const response = await axios.get(backendLogoutUrl, {
-        headers: {
-          "X-CSRF-Token": csrfToken,
-        },
-        withCredentials: true,
+      const response = await makeAuthenticatedRequest(async () => {
+        return await axios.post("http://localhost:5000/api/auth/logout", {}, {
+          withCredentials: true,
+        });
       });
 
       if (response.status === 200) {
         toast.success("Logout successful!");
         router.push("/login");
       } else {
-        throw new Error(response.data?.message || "Logout failed.");
+        throw new Error("Logout failed.");
       }
     } catch (err) {
       const axiosError = err as AxiosError;
-      const errorMessage =
-        (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
-          ? (axiosError.response.data as { message?: string }).message
-          : undefined)
-        || axiosError.message
-        || "An unexpected error occurred.";
-      setError(`Logout failed: ${errorMessage}`);
-      toast.error(`Logout failed: ${errorMessage}`);
-      console.error("Logout error:", err);
+      
+      if (axiosError.message !== "Token refresh failed") {
+        const errorMessage =
+          (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
+            ? (axiosError.response.data as { message?: string }).message
+            : undefined)
+          || axiosError.message
+          || "An unexpected error occurred.";
+        
+        setError(`Logout failed: ${errorMessage}`);
+        toast.error(`Logout failed: ${errorMessage}`);
+        console.error("Logout error:", err);
+      }
     } finally {
       setLoadingLogout(false);
     }
   };
 
   // --- UI Rendering ---
-
   if (loadingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-        <p className="text-xl">Loading Dashboard...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mx-auto mb-4"></div>
+          <p className="text-xl">Loading Dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -129,9 +185,20 @@ export default function Dashboard() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
         <h2 className="text-3xl font-bold mb-4 text-red-500">Error Loading Dashboard</h2>
         <p className="text-lg mb-6 text-center">{error}</p>
-        <Button onClick={() => router.push("/login")} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg">
-          Go to Login
-        </Button>
+        <div className="space-x-4">
+          <Button 
+            onClick={() => fetchUserProfile()} 
+            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg"
+          >
+            Retry
+          </Button>
+          <Button 
+            onClick={() => router.push("/login")} 
+            className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg"
+          >
+            Go to Login
+          </Button>
+        </div>
       </div>
     );
   }
@@ -154,16 +221,21 @@ export default function Dashboard() {
         </div>
 
         <nav className="space-y-3">
-          {["Overview", "Upload", "Analytics", "Settings"].map((item) => ( // Changed "Uploads" to "Upload" for singular focus
+          {["Overview", "Upload", "Analytics", "Settings"].map((item) => (
             <button
               key={item}
               className="w-full text-left py-2 px-4 rounded-lg text-lg font-medium transition-colors
                 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
                 flex items-center gap-3"
+              onClick={() => {
+                if (item === "Upload") {
+                  router.push("/file_upload");
+                }
+              }}
             >
               {item === "Overview" && <DocumentTextIcon className="h-5 w-5" />}
               {item === "Upload" && <CloudArrowUpIcon className="h-5 w-5" />}
-              {item === "Analytics" && <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />} {/* Placeholder icon */}
+              {item === "Analytics" && <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />}
               {item === "Settings" && <UserCircleIcon className="h-5 w-5" />}
               {item}
             </button>
@@ -171,11 +243,21 @@ export default function Dashboard() {
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700">
           <Button
-            className="w-full py-2 px-4 bg-red-600 rounded-lg hover:bg-red-700 transition font-semibold"
+            className="w-full py-2 px-4 bg-red-600 rounded-lg hover:bg-red-700 transition font-semibold flex items-center justify-center gap-2"
             onClick={handleLogout}
             disabled={loadingLogout}
           >
-            {loadingLogout ? "Logging Out..." : <><ArrowLeftEndOnRectangleIcon className="h-5 w-5 mr-2" /> Logout</>}
+            {loadingLogout ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Logging Out...
+              </>
+            ) : (
+              <>
+                <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />
+                Logout
+              </>
+            )}
           </Button>
         </div>
       </aside>
@@ -187,7 +269,6 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold text-blue-400">
             Dashboard Overview
           </h2>
-          {/* Search input remains for future use */}
           <input
             type="text"
             placeholder="Search files..."
@@ -195,12 +276,12 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Stats Section (Static for now, can be dynamic later) */}
+        {/* Stats Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
           {[
-            { title: "Total Scans", value: "N/A", icon: "📊" }, // Placeholder
-            { title: "Potential Threats", value: "N/A", icon: "⚠️" }, // Placeholder
-            { title: "Files Processed", value: "N/A", icon: "📁" }, // Placeholder
+            { title: "Total Scans", value: "N/A", icon: "📊" },
+            { title: "Potential Threats", value: "N/A", icon: "⚠️" },
+            { title: "Files Processed", value: "N/A", icon: "📁" },
           ].map((stat, i) => (
             <div
               key={i}
@@ -213,17 +294,10 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* File Upload Section - Separate Component */}
-        {/*
-          IMPORTANT:
-          The onUploadSuccess prop will trigger fetchUserFiles in the future.
-          For now, it can just show a toast or a simple log.
-          When you implement /api/user/files, uncomment the `useEffect` and `fetchUserFiles` in Dashboard,
-          and ensure this callback is triggered by FileUploadSection.
-        */}
+        {/* File Upload Section */}
         <FileUploadSection onUploadSuccess={() => toast.success("Upload complete! File will appear in your list soon.")} />
 
-        {/* Placeholder for User Files Section - Will be enabled when API is ready */}
+        {/* Placeholder for User Files Section */}
         <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-lg text-center text-gray-400">
           <h2 className="text-xl font-bold mb-6 text-orange-400">
             Your Scanned Files
@@ -232,18 +306,8 @@ export default function Dashboard() {
           <p className="mt-2">
             Stay tuned! We are building the feature to list your files here.
           </p>
-          {/* When ready, replace this div with: */}
-          {/* <UserFilesList files={files} loadingFiles={loadingFiles} /> */}
         </div>
       </main>
     </div>
   );
 }
-
-// Ensure your FileUploadSection component (file_upload_section.tsx) is updated as well.
-// It will now just take `onUploadSuccess` as a prop.
-
-// app/dashboard/file_upload_section.tsx (Updated)
-// The content inside this component remains largely the same as my previous suggestion,
-// but ensure it uses the `onUploadSuccess` prop.
-// ... (content of FileUploadSection from previous response, just ensure it's in this file and takes the prop) ...
