@@ -7,12 +7,10 @@ import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 // Import simple icons instead of complex ones or images
 import { UserCircleIcon, CloudArrowUpIcon, DocumentTextIcon, ArrowLeftEndOnRectangleIcon } from '@heroicons/react/24/outline';
-
+// import { Button } from "@/components/ui/button";
 // Assuming these are properly imported or defined
 import { Button } from "@/components/ui/button";
 import FileUploadSection from "../file_upload/page";
-
-
 // Define interfaces for data fetched from backend
 interface UserProfile {
   id: string;
@@ -222,7 +220,7 @@ export default function Dashboard() {
 
         <nav className="space-y-3">
           {["Overview", "Upload", "Analytics", "Settings"].map((item) => (
-            <button
+            <Button
               key={item}
               className="w-full text-left py-2 px-4 rounded-lg text-lg font-medium transition-colors
                 hover:bg-gray-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50
@@ -234,11 +232,11 @@ export default function Dashboard() {
               }}
             >
               {item === "Overview" && <DocumentTextIcon className="h-5 w-5" />}
-              {item === "Upload" && <CloudArrowUpIcon className="h-5 w-5" />}
+              {item === "Upload" && <CloudArrowUpIcon className="h-5 w-5"  onClick={() => router.push("/file_upload")}/>}
               {item === "Analytics" && <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />}
               {item === "Settings" && <UserCircleIcon className="h-5 w-5" />}
               {item}
-            </button>
+            </Button>
           ))}
         </nav>
         <div className="mt-auto pt-6 border-t border-gray-700">
@@ -277,36 +275,11 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-          {[
-            { title: "Total Scans", value: "N/A", icon: "📊" },
-            { title: "Potential Threats", value: "N/A", icon: "⚠️" },
-            { title: "Files Processed", value: "N/A", icon: "📁" },
-          ].map((stat, i) => (
-            <div
-              key={i}
-              className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700 text-center flex flex-col items-center justify-center"
-            >
-              <div className="text-5xl mb-2">{stat.icon}</div>
-              <h2 className="text-4xl font-bold mb-1">{stat.value}</h2>
-              <p className="text-gray-300">{stat.title}</p>
-            </div>
-          ))}
-        </div>
-
+        
         {/* File Upload Section */}
         <FileUploadSection onUploadSuccess={() => toast.success("Upload complete! File will appear in your list soon.")} />
 
         {/* Placeholder for User Files Section */}
-        <div className="bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-lg text-center text-gray-400">
-          <h2 className="text-xl font-bold mb-6 text-orange-400">
-            Your Scanned Files
-          </h2>
-          <p>This section will show your previously uploaded files and their analysis results.</p>
-          <p className="mt-2">
-            Stay tuned! We are building the feature to list your files here.
-          </p>
-        </div>
       </main>
     </div>
   );
