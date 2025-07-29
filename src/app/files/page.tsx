@@ -5,6 +5,10 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { on } from "events";
 
 interface FileItem {
   public_id: string;
@@ -19,7 +23,7 @@ export default function FileViewer() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState<"all" | "image" | "pdf">("all");
-
+  const [globalProgress, setGlobalProgress] = useState(0);
   const fetchFiles = async (nextCursor: string | null = null) => {
     setLoading(true);
     setError(null); // Reset error state
@@ -32,7 +36,14 @@ export default function FileViewer() {
     try {
       const res = await axios.get(`/api/cloudinary_fetch?${params.toString()}`, {
         withCredentials: true,
-      });
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setGlobalProgress(percent);
+          }
+        },
+      },
+      );
 
       const data = res.data;
 
@@ -54,8 +65,8 @@ export default function FileViewer() {
   }, [type]);
 
   return (
-    <div className="p-4 bg-gray-800 rounded-lg shadow-md">
-      <h1 className="text-xl font-bold mb-4 text-white">Your Files</h1>
+    <Card className="p-4 bg-gray-800 rounded-lg shadow-md">
+      <CardTitle className="text-xl font-bold mb-4 text-white">Your Files</CardTitle>
 
       <div className="mb-4">
         <select
@@ -71,7 +82,7 @@ export default function FileViewer() {
 
       {error && <p className="text-red-500 mb-4">{error}</p>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <Card className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {files.map((file) => (
           <div
             key={file.public_id}
@@ -81,28 +92,28 @@ export default function FileViewer() {
             {file.format === "pdf" ? (
               <div className="bg-gray-100 p-4 text-center text-xs">📄 PDF File</div>
             ) : (
-              <img src={file.url} alt={file.public_id} className="w-full rounded" />
+              <img src={file.url} alt={file.public_id} className="w-10 relative rounded" />
             )}
           </div>
         ))}
-      </div>
+      </Card>
 
       {loading && (
-        <div className="flex justify-center mt-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-        </div>
+        <CardDescription className="flex justify-center mt-4">
+          <Progress value={globalProgress} className="h-3 bg-white"/>
+        </CardDescription>
       )}
 
       {cursor && !loading && (
-        <div className="mt-4">
-          <button
+        <CardDescription className="mt-4">
+          <Button
             onClick={() => fetchFiles(cursor)}
             className="bg-blue-500 text-white px-4 py-2 rounded shadow hover:bg-blue-600 transition duration-200"
           >
             Load More
-          </button>
-        </div>
+          </Button>
+        </CardDescription>
       )}
-    </div>
+    </Card>
   );
 }
