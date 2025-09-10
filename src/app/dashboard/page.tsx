@@ -7,7 +7,12 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 // Import simple icons instead of complex ones or images
-import { UserCircleIcon, CloudArrowUpIcon, DocumentTextIcon, ArrowLeftEndOnRectangleIcon } from '@heroicons/react/24/outline';
+import {
+  UserCircleIcon,
+  CloudArrowUpIcon,
+  DocumentTextIcon,
+  ArrowLeftEndOnRectangleIcon,
+} from "@heroicons/react/24/outline";
 // import { Button } from "@/components/ui/button";
 // Assuming these are properly imported or defined
 import { Button } from "@/components/ui/button";
@@ -18,7 +23,14 @@ interface UserProfile {
   email: string;
   name?: string;
 }
-
+interface BackendUserProfileResponse {
+  message: string;
+  user: {
+    message: string;
+    user: UserProfile;
+  };
+  userId?: string; // You can mark this optional if it's not always present
+}
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -29,9 +41,13 @@ export default function Dashboard() {
   const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
       console.log("🔄 Attempting token refresh...");
-      const response = await axios.post("http://localhost:5000/api/auth/refreshToken", {}, {
-        withCredentials: true,
-      });
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/refreshToken",
+        {},
+        {
+          withCredentials: true,
+        }
+      );
 
       if (response.status === 200) {
         console.log("✅ Token refresh successful");
@@ -46,7 +62,7 @@ export default function Dashboard() {
 
   // --- Enhanced API Call with Auto-Retry ---
   const makeAuthenticatedRequest = useCallback(
-    async function<T>(
+    async function <T>(
       requestFn: () => Promise<T>,
       maxRetries: number = 1
     ): Promise<T> {
@@ -60,9 +76,17 @@ export default function Dashboard() {
           lastError = axiosError;
 
           // If it's a 401/403 (token expired) and we haven't exhausted retries
-          if ((axiosError.response?.status === 401 || axiosError.response?.status === 403) && attempt < maxRetries) {
-            console.log(`🔄 Token expired, attempting refresh (attempt ${attempt + 1}/${maxRetries + 1})`);
-            
+          if (
+            (axiosError.response?.status === 401 ||
+              axiosError.response?.status === 403) &&
+            attempt < maxRetries
+          ) {
+            console.log(
+              `🔄 Token expired, attempting refresh (attempt ${attempt + 1}/${
+                maxRetries + 1
+              })`
+            );
+
             const refreshSuccess = await refreshToken();
             if (refreshSuccess) {
               console.log("✅ Token refreshed, retrying request...");
@@ -74,7 +98,7 @@ export default function Dashboard() {
               throw new Error("Token refresh failed");
             }
           }
-          
+
           // If it's not an auth error, or we've exhausted retries, throw the error
           throw axiosError;
         }
@@ -89,35 +113,36 @@ export default function Dashboard() {
   const fetchUserProfile = useCallback(async () => {
     setLoadingUser(true);
     setError(null);
-    
+
     try {
       const response = await makeAuthenticatedRequest(async () => {
-        return await axios.get<{
-          message: string; 
-          userId: string; 
-          user: UserProfile 
-        }>("/api/user/get-id", {
+        return await axios.get<BackendUserProfileResponse>("/api/user/get-id", {
           withCredentials: true,
         });
       });
-
+      console.log("User Data Response :-",response.data);
+      
       if (response.status === 200 && response.data.user) {
-        setUser(response.data.user);
+        setUser(response.data.user.user);
       } else {
-        throw new Error(response.data?.message || "Failed to fetch user profile.");
+        throw new Error(
+          response.data?.message || "Failed to fetch user profile."
+        );
       }
     } catch (err) {
       const axiosError = err as AxiosError;
-      
+
       // Don't show error if we're redirecting to login
       if (axiosError.message !== "Token refresh failed") {
         const errorMessage =
-          (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
+          (axiosError.response?.data &&
+          typeof axiosError.response.data === "object" &&
+          "message" in axiosError.response.data
             ? (axiosError.response.data as { message?: string }).message
-            : undefined)
-          || axiosError.message
-          || "An unexpected error occurred.";
-        
+            : undefined) ||
+          axiosError.message ||
+          "An unexpected error occurred.";
+
         setError(`Failed to load user profile: ${errorMessage}`);
         toast.error(`Failed to load user: ${errorMessage}`);
       }
@@ -136,9 +161,13 @@ export default function Dashboard() {
     setLoadingLogout(true);
     try {
       const response = await makeAuthenticatedRequest(async () => {
-        return await axios.post("http://localhost:5000/api/auth/logout", {}, {
-          withCredentials: true,
-        });
+        return await axios.post(
+          "http://localhost:5000/api/auth/logout",
+          {},
+          {
+            withCredentials: true,
+          }
+        );
       });
 
       if (response.status === 200) {
@@ -149,15 +178,17 @@ export default function Dashboard() {
       }
     } catch (err) {
       const axiosError = err as AxiosError;
-      
+
       if (axiosError.message !== "Token refresh failed") {
         const errorMessage =
-          (axiosError.response?.data && typeof axiosError.response.data === "object" && "message" in axiosError.response.data
+          (axiosError.response?.data &&
+          typeof axiosError.response.data === "object" &&
+          "message" in axiosError.response.data
             ? (axiosError.response.data as { message?: string }).message
-            : undefined)
-          || axiosError.message
-          || "An unexpected error occurred.";
-        
+            : undefined) ||
+          axiosError.message ||
+          "An unexpected error occurred.";
+
         setError(`Logout failed: ${errorMessage}`);
         toast.error(`Logout failed: ${errorMessage}`);
         console.error("Logout error:", err);
@@ -182,17 +213,19 @@ export default function Dashboard() {
   if (error && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
-        <h2 className="text-3xl font-bold mb-4 text-red-500">Error Loading Dashboard</h2>
+        <h2 className="text-3xl font-bold mb-4 text-red-500">
+          Error Loading Dashboard
+        </h2>
         <p className="text-lg mb-6 text-center">{error}</p>
         <div className="space-x-4">
-          <Button 
-            onClick={() => fetchUserProfile()} 
+          <Button
+            onClick={() => fetchUserProfile()}
             className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg"
           >
             Retry
           </Button>
-          <Button 
-            onClick={() => router.push("/login")} 
+          <Button
+            onClick={() => router.push("/login")}
             className="px-6 py-3 bg-gray-600 hover:bg-gray-700 rounded-lg"
           >
             Go to Login
@@ -211,8 +244,9 @@ export default function Dashboard() {
         </h1>
         <div className="flex items-center space-x-3 mb-8">
           <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-xl font-bold uppercase">
-            {user?.name ? user.name.charAt(0) : user?.email.charAt(0) || '?'}
+            {user?.name ? user.name.charAt(0) : user?.email.charAt(0) || "?"}
           </div>
+
           <div>
             <p className="font-semibold text-lg">{user?.name || user?.email}</p>
             <p className="text-sm text-gray-400">Welcome!</p>
@@ -233,8 +267,15 @@ export default function Dashboard() {
               }}
             >
               {item === "Overview" && <DocumentTextIcon className="h-5 w-5" />}
-              {item === "Upload" && <CloudArrowUpIcon className="h-5 w-5"  onClick={() => router.push("/file_upload")}/>}
-              {item === "Analytics" && <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />}
+              {item === "Upload" && (
+                <CloudArrowUpIcon
+                  className="h-5 w-5"
+                  onClick={() => router.push("/file_upload")}
+                />
+              )}
+              {item === "Analytics" && (
+                <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />
+              )}
               {item === "Settings" && <UserCircleIcon className="h-5 w-5" />}
               {item}
             </Button>
@@ -276,9 +317,15 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Section */}
-        <PdfTextExtraction/>
+        <PdfTextExtraction />
         {/* File Upload Section */}
-        <FileUploadSection onUploadSuccess={() => toast.success("Upload complete! File will appear in your list soon.")} />
+        <FileUploadSection
+          onUploadSuccess={() =>
+            toast.success(
+              "Upload complete! File will appear in your list soon."
+            )
+          }
+        />
 
         {/* Placeholder for User Files Section */}
       </main>
