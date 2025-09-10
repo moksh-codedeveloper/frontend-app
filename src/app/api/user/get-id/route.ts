@@ -1,4 +1,3 @@
-// app/api/user/get-id/route.ts - Fixed version
 import { NextResponse, NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import axios from "axios";
@@ -24,51 +23,30 @@ export async function GET(request: NextRequest) {
     const token = tokenCookie.value;
     const backendApiUrl = "http://localhost:5000";
 
-    // Method 1: Use Authorization header (RECOMMENDED)
+    // ✅ Forward the cookie instead of using Authorization header
     const response = await axios.get<BackendUserProfile | { message: string }>(
       `${backendApiUrl}/api/auth/profile`,
       {
         headers: {
-          Authorization: `Bearer ${token}`, // ✅ Use Authorization header
+          'Cookie': `token=${token}`, // Forward token as cookie
         },
         withCredentials: true,
         validateStatus: (status) => status >= 200 && status < 500,
       }
     );
 
-    // Method 2: If you want to keep using cookies, forward ALL cookies
-    /*
-    const response = await axios.get<BackendUserProfile | { message: string }>(
-      `${backendApiUrl}/api/auth/profile`,
-      {
-        headers: {
-          'Cookie': request.headers.get('cookie') || `token=${token}`, // Forward all cookies
-        },
-        withCredentials: true,
-        validateStatus: (status) => status >= 200 && status < 500
-      }
-    );
-    */
-
     if (response.status !== 200) {
       const errorData = response.data as { message: string };
-      console.error(
-        "Backend /profile error response:",
-        response.status,
-        errorData
-      );
+      console.error("Backend /profile error response:", response.status, errorData);
       return NextResponse.json(
         {
-          message:
-            errorData.message || "Failed to fetch user profile from backend.",
+          message: errorData.message || "Failed to fetch user profile from backend.",
         },
         { status: response.status }
       );
     }
 
-    const userProfile = (
-      response.data as unknown as { user: BackendUserProfile }
-    ).user;
+    const userProfile = response.data as BackendUserProfile;
 
     return NextResponse.json(
       {

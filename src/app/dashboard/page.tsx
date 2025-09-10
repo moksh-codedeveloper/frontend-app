@@ -2,6 +2,7 @@
 // app/dashboard/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
+import PdfTextExtraction from "@/components/pdf_extraction";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
@@ -275,7 +276,7 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Section */}
-        
+        <PdfTextExtraction/>
         {/* File Upload Section */}
         <FileUploadSection onUploadSuccess={() => toast.success("Upload complete! File will appear in your list soon.")} />
 
