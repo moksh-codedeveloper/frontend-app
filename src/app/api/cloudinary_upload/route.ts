@@ -102,13 +102,19 @@ export async function POST(request: NextRequest) {
           
           const buffer = Buffer.from(await file.arrayBuffer());
 
+          // ✅ Determine resource type based on file type
+          const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+          const resourceType = isPdf ? 'raw' : 'auto';
+          
+          console.log(`File type: ${file.type}, Resource type: ${resourceType}`);
+
           // ✅ Create upload promise with longer timeout
           const uploadResult: any = await Promise.race([
             new Promise((resolve, reject) => {
               const stream = cloudinary.uploader.upload_stream(
                 {
                   folder: uploadFolder,
-                  resource_type: "auto",
+                  resource_type: resourceType, // ✅ FIXED: Use 'raw' for PDFs, 'auto' for others
                   use_filename: true,
                   unique_filename: true,
                   timeout: 120000, // ✅ 2 minutes timeout for large files
@@ -119,7 +125,7 @@ export async function POST(request: NextRequest) {
                     console.error(`Cloudinary upload error for ${file.name} (attempt ${retryCount + 1}):`, error);
                     reject(error);
                   } else {
-                    console.log(`Successfully uploaded ${file.name} on attempt ${retryCount + 1}`);
+                    console.log(`Successfully uploaded ${file.name} as ${resourceType} on attempt ${retryCount + 1}`);
                     resolve(result);
                   }
                 }
