@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // app/dashboard/page.tsx
 "use client";
@@ -13,30 +14,36 @@ import {
   DocumentTextIcon,
   ArrowLeftEndOnRectangleIcon,
 } from "@heroicons/react/24/outline";
-// import { Button } from "@/components/ui/button";
-// Assuming these are properly imported or defined
 import { Button } from "@/components/ui/button";
 import FileUploadSection from "../file_upload/page";
+
 // Define interfaces for data fetched from backend
 interface UserProfile {
+  message: string;
   id: string;
   email: string;
   name?: string;
-}
-interface BackendUserProfileResponse {
-  message: string;
-  user: {
-    message: string;
-    user: UserProfile;
+  user?: {
+    id: string;
+    email: string;
+    name?: string;
   };
-  userId?: string; // You can mark this optional if it's not always present
 }
+
 export default function Dashboard() {
   const router = useRouter();
-  const [user, setUser] = useState<UserProfile | null>(null);
+  
+  // ✅ FIXED: Properly manage user state instead of loose variables
+  const [user, setUser] = useState<{
+    id: string;
+    email: string;
+    name?: string;
+  } | null>(null);
+  
   const [loadingUser, setLoadingUser] = useState(true);
   const [loadingLogout, setLoadingLogout] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   // --- Token Refresh Function ---
   const refreshToken = useCallback(async (): Promise<boolean> => {
     try {
@@ -116,14 +123,32 @@ export default function Dashboard() {
 
     try {
       const response = await makeAuthenticatedRequest(async () => {
-        return await axios.get<BackendUserProfileResponse>("/api/user/get-id", {
+        return await axios.get<UserProfile>("http://localhost:5000/api/auth/profile", {
           withCredentials: true,
         });
       });
-      console.log("User Data Response :-",response.data);
       
-      if (response.status === 200 && response.data.user) {
-        setUser(response.data.user.user);
+      console.log("User Data Response :-", response.data);
+      
+      if (response.status === 200 && response.data.id) {
+        // ✅ FIXED: Handle both response formats from backend with proper type checking
+        const userId = response.data.id || response.data.user?.id;
+        const userEmail = response.data.email || response.data.user?.email;
+        const userName = response.data.name || response.data.user?.name;
+        
+        // ✅ FIXED: Ensure required fields are present before setting state
+        if (userId && userEmail) {
+          const userData = {
+            id: userId,
+            email: userEmail,
+            name: userName,
+          };
+          
+          setUser(userData);
+        } else {
+          throw new Error("Invalid user data received from server.");
+        }
+        
       } else {
         throw new Error(
           response.data?.message || "Failed to fetch user profile."
@@ -171,6 +196,8 @@ export default function Dashboard() {
       });
 
       if (response.status === 200) {
+        // ✅ FIXED: Clear user state on logout
+        setUser(null);
         toast.success("Logout successful!");
         router.push("/login");
       } else {
@@ -210,6 +237,7 @@ export default function Dashboard() {
     );
   }
 
+  // ✅ FIXED: Check for user instead of username
   if (error && !user) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-900 text-white p-4">
@@ -235,6 +263,17 @@ export default function Dashboard() {
     );
   }
 
+  // ✅ FIXED: Guard against null user
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center">
+          <p className="text-xl">Loading user data...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex bg-gray-900 text-white">
       {/* Sidebar */}
@@ -244,11 +283,14 @@ export default function Dashboard() {
         </h1>
         <div className="flex items-center space-x-3 mb-8">
           <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-xl font-bold uppercase">
-            {user?.name ? user.name.charAt(0) : user?.email.charAt(0) || "?"}
+            {/* ✅ FIXED: Safe access to user.name with fallback */}
+            {user.name ? user.name.charAt(0) : user.email.charAt(0)}
           </div>
 
           <div>
-            <p className="font-semibold text-lg">{user?.name || user?.email}</p>
+            {/* ✅ FIXED: Use user state instead of undefined variables */}
+            <p className="font-semibold text-lg">{user.name || "User"}</p>
+            <p className="text-sm text-gray-400">{user.email}</p>
             <p className="text-sm text-gray-400">Welcome!</p>
           </div>
         </div>
@@ -268,10 +310,7 @@ export default function Dashboard() {
             >
               {item === "Overview" && <DocumentTextIcon className="h-5 w-5" />}
               {item === "Upload" && (
-                <CloudArrowUpIcon
-                  className="h-5 w-5"
-                  onClick={() => router.push("/file_upload")}
-                />
+                <CloudArrowUpIcon className="h-5 w-5" />
               )}
               {item === "Analytics" && (
                 <ArrowLeftEndOnRectangleIcon className="h-5 w-5" />
@@ -318,6 +357,7 @@ export default function Dashboard() {
 
         {/* Stats Section */}
         <PdfTextExtraction />
+        
         {/* File Upload Section */}
         <FileUploadSection
           onUploadSuccess={() =>

@@ -47,7 +47,8 @@ export async function GET(request: NextRequest) {
     }
 
     const userProfile = response.data as BackendUserProfile;
-
+    console.log(userProfile);
+    
     return NextResponse.json(
       {
         message: "User ID fetched successfully",
