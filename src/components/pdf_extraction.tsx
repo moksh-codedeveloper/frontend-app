@@ -21,10 +21,10 @@ export default function PdfTextExtraction() {
 
     try {
       // ✅ Get user ID
-      const userIdRes = await axios.get("/api/user/get-id", {
+      const userIdRes = await axios.get("http://localhost:5000/api/auth/profile", {
         withCredentials: true,
       });
-      const userId = userIdRes.data.user.user.id;
+      const userId = userIdRes.data.user.id;
 
 
       // ✅ Call backend API to analyze PDF
