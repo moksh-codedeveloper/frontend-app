@@ -3,7 +3,6 @@
 // app/dashboard/page.tsx
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import PdfTextExtraction from "@/components/pdf_extraction";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
@@ -15,7 +14,7 @@ import {
   ArrowLeftEndOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
-import FileUploadSection from "../file_upload/page";
+import FileUploadSection from "@/components/FileUpload";
 
 // Define interfaces for data fetched from backend
 interface UserProfile {
@@ -356,15 +355,12 @@ export default function Dashboard() {
         </div>
 
         {/* Stats Section */}
-        <PdfTextExtraction />
         
         {/* File Upload Section */}
         <FileUploadSection
-          onUploadSuccess={() =>
-            toast.success(
-              "Upload complete! File will appear in your list soon."
-            )
-          }
+          onUploadSuccess={() => {
+            toast.success("Files are uploaded!")
+          }}
         />
 
         {/* Placeholder for User Files Section */}

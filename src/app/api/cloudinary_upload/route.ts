@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
               const stream = cloudinary.uploader.upload_stream(
                 {
                   folder: uploadFolder,
+                  format: "pdf",
                   resource_type: resourceType, // ✅ FIXED: Use 'raw' for PDFs, 'auto' for others
                   use_filename: true,
                   unique_filename: true,
