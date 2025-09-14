@@ -87,7 +87,7 @@ export function Navbar() {
             <Button variant="ghost">Files</Button>
           </Link>
           <Link href="/" passHref>
-            <Button variant="ghost">Analytical page</Button>
+            <Button variant="ghost">Profile</Button>
           </Link>
 
           {!loading && auth.status === "authenticated" ? (
