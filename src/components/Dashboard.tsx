@@ -278,7 +278,7 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 bg-gray-800 p-6 flex flex-col border-r border-gray-700 shadow-xl">
         <h1 className="text-2xl font-bold mb-10 text-center text-blue-400">
-          DFI Dashboard
+          DFIT Dashboard
         </h1>
         <div className="flex items-center space-x-3 mb-8">
           <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center text-xl font-bold uppercase">

@@ -1,20 +1,23 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client";
+
 import React from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
 export default function LoginPage() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState("");
   const [loading, setLoading] = React.useState(false);
-  const router = useRouter()
+  const router = useRouter();
+
   const login = async (email: string, password: string) => {
     try {
       const csrfToken = await getCsrfToken();
@@ -32,7 +35,7 @@ export default function LoginPage() {
       if (response.status === 200) {
         toast.success("Login successful!");
         setError("");
-        router.push("/"); // Redirect to dashboard after successful login
+        router.push("/dashboard"); // Redirect to dashboard after successful login
       }
     } catch (error: any) {
       toast.error("Login failed: " + (error.response?.data?.message || error.message));
@@ -41,54 +44,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-black">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.6 }}
+        initial={{ opacity: 0, y: 50 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="backdrop-blur-xl bg-white/10 shadow-2xl border border-white/20 rounded-2xl">
-          <CardHeader className="text-center space-y-1">
-            <CardTitle className="text-3xl font-bold text-white">Welcome Back</CardTitle>
-            <p className="text-gray-300 text-sm">Sign in to continue your journey</p>
+        <Card className="shadow-lg rounded-xl border border-gray-200">
+          <CardHeader className="text-center pt-10">
+            <CardTitle className="text-2xl font-bold text-gray-900">Welcome Back</CardTitle>
+            <CardDescription className="text-sm text-gray-600">Sign in to access your dashboard</CardDescription>
           </CardHeader>
 
-          <CardContent className="p-6">
-            {/* Email Input */}
-            <div>
-              <Input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                className="bg-white/20 text-white placeholder-gray-300 border border-white/30 focus:border-indigo-400 focus:ring-indigo-400 transition-all"
-              />
-            </div>
-
-            {/* Password Input */}
-            <div className="mt-4">
-              <Input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Password"
-                className="bg-white/20 text-white placeholder-gray-300 border border-white/30 focus:border-indigo-400 focus:ring-indigo-400 transition-all"
-              />
-            </div>
-
-            {/* Description */}
-            <CardDescription className="mt-4 text-xs text-gray-400 leading-relaxed">
-            {error && <p className="text-red-400 mt-2">{error}</p>}
-            </CardDescription>
-
-
-            {/* Submit Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              disabled={loading}
-              onClick={async (e) => {
-                e.preventDefault();
+          <CardContent className="px-8 pb-10 space-y-4">
+            <Input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+            />
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+            />
+            {error && <p className="text-sm text-red-500">{error}</p>}
+            <Button
+              type="submit"
+              onClick={async () => {
                 setError("");
                 setLoading(true);
                 try {
@@ -97,23 +83,20 @@ export default function LoginPage() {
                   setLoading(false);
                 }
               }}
-              className="mt-6 w-full py-3 rounded-xl font-semibold text-lg text-white 
-                        bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 
-                        hover:from-pink-500 hover:to-indigo-500 shadow-lg shadow-indigo-500/50 
-                        transition-all duration-300 relative overflow-hidden"
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors disabled:opacity-50"
+              disabled={loading}
             >
-              {loading ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
-                  </svg>
-                  Logging in...
-                </span>
-              ) : (
-                "Login"
-              )}
-            </motion.button>
+              {loading ? "Logging in..." : "Login"}
+            </Button>
+            <p className="text-center text-sm text-gray-600 mt-4">
+              Don&apos;t have an account?{" "}
+              <button
+                onClick={() => router.push("/register")}
+                className="text-indigo-600 hover:text-indigo-500 font-medium"
+              >
+                Sign up
+              </button>
+            </p>
           </CardContent>
         </Card>
       </motion.div>

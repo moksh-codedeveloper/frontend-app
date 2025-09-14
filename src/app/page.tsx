@@ -1,6 +1,6 @@
 // app/page.tsx
 "use client";
-import Dashboard from "@/components/Dashboard.jsx";
+import Dashboard from "@/components/Dashboard";
 export default function HomePage() {
   return (
     <Dashboard/>

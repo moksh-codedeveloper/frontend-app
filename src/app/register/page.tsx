@@ -1,19 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
+
 import React from "react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { getCsrfToken } from "@/utils/getCsrfToken";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+
 export default function RegisterPage() {
   const router = useRouter();
   const [name, setName] = React.useState("");
@@ -44,7 +41,7 @@ export default function RegisterPage() {
       if (response.status === 201) {
         toast.success("Registration successful!");
         setError("");
-        router.push("/login"); // Redirect to login page after successful registration
+        router.push("/login");
       }
     } catch (error: any) {
       toast.error(
@@ -56,87 +53,72 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-emerald-200 via-teal-100 to-white">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6 }}
+        transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="bg-white/80 backdrop-blur-lg shadow-xl border border-gray-200 rounded-2xl">
-          <CardHeader className="text-center">
-            <CardTitle className="text-3xl font-bold text-gray-800">
-              Create Account
-            </CardTitle>
-            <p className="text-gray-500 text-sm">
-              Join us and start your journey
-            </p>
+        <Card className="shadow-lg rounded-xl border border-gray-200">
+          <CardHeader className="text-center pt-10">
+            <CardTitle className="text-2xl font-bold text-gray-900">Create your DFIT account</CardTitle>
           </CardHeader>
-
-          <CardContent className="p-6 space-y-4">
-            {/* Name Input */}
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full Name"
-              className="bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:border-emerald-400 focus:ring-emerald-400 transition-all"
-            />
-
-            {/* Email */}
-            <Input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email"
-              className="bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:border-emerald-400 focus:ring-emerald-400 transition-all"
-            />
-
-            {/* Password */}
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
-              className="bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:border-emerald-400 focus:ring-emerald-400 transition-all"
-            />
-
-            {/* Confirm Password */}
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirm Password"
-              className="bg-white border border-gray-300 text-gray-800 placeholder-gray-400 focus:border-emerald-400 focus:ring-emerald-400 transition-all"
-            />
-
-            <CardDescription className="text-xs text-gray-500 mt-2">
-              Password should include:
-              <br />• 8+ characters, 1 uppercase, 1 number, 1 special char.
-            </CardDescription>
-
-            {error && <p className="text-red-500">{error}</p>}
-
-            {/* Submit Button */}
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-              disabled={loading}
-              onClick={async (e) => {
-                e.preventDefault();
-                setError("");
-                setLoading(true);
-                try {
-                  await register();
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              className="mt-4 w-full py-3 rounded-xl font-semibold text-lg text-white 
-                        bg-gradient-to-r from-teal-500 via-emerald-400 to-green-400 
-                        hover:from-green-400 hover:to-teal-500 shadow-lg shadow-emerald-500/50 
-                        transition-all duration-300"
-            >
-              {loading ? "Creating Account..." : "Register"}
-            </motion.button>
+          <CardContent className="px-8 pb-10">
+            <form className="space-y-6" onSubmit={(e) => e.preventDefault()}>
+              <Input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full Name"
+                className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+              />
+              <Input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email"
+                className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+              />
+              <Input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+              />
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm Password"
+                className="bg-white border border-gray-300 placeholder-gray-500 focus:border-indigo-600 focus:ring-indigo-500"
+              />
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button
+                type="submit"
+                onClick={async () => {
+                  setError("");
+                  setLoading(true);
+                  try {
+                    await register();
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-semibold transition-colors"
+                disabled={loading}
+              >
+                {loading ? "Creating Account..." : "Register"}
+              </Button>
+            </form>
+            <p className="mt-4 text-center text-sm text-gray-600">
+              Already have an account?{" "}
+              <button
+                onClick={() => router.push("/login")}
+                className="text-indigo-600 hover:text-indigo-500 font-medium"
+              >
+                Sign in
+              </button>
+            </p>
           </CardContent>
         </Card>
       </motion.div>

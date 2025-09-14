@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 // import AppWrapper from '@/components/AppWrapper';
-
+import { Navbar } from "@/components/Navbar";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -26,21 +26,25 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <title>DFIT</title>
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
-        <Toaster 
-        position="top-right"
-        toastOptions={{
-          style: {
-            fontFamily: "var(--font-geist-sans)",
-            backdropFilter: "blur(10px)",
-            background: "rgba(255,255,255,0.1)",
-            color: "black",
-            border: "1px solid rgba(255,255,255,0.2)",
-          },
-        }}
+        <Navbar/>
+        <main className="pt-16">{children}</main>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              fontFamily: "var(--font-geist-sans)",
+              backdropFilter: "blur(10px)",
+              background: "rgba(255,255,255,0.1)",
+              color: "black",
+              border: "1px solid rgba(255,255,255,0.2)",
+            },
+          }}
         />
       </body>
     </html>
