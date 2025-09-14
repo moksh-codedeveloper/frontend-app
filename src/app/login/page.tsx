@@ -32,7 +32,7 @@ export default function LoginPage() {
       if (response.status === 200) {
         toast.success("Login successful!");
         setError("");
-        router.push("/dashboard"); // Redirect to dashboard after successful login
+        router.push("/"); // Redirect to dashboard after successful login
       }
     } catch (error: any) {
       toast.error("Login failed: " + (error.response?.data?.message || error.message));

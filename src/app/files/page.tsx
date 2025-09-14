@@ -8,7 +8,6 @@ import axios from "axios";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { on } from "events";
 
 interface FileItem {
   public_id: string;
