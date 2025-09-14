@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// app/api/cloudinary_fetch/route.ts - Fixed version
+// app/api/cloudinary_fetch/route.ts - Simplified with POST body
 import { NextResponse } from "next/server";
 import axios from "axios";
 import type { NextRequest } from "next/server";
 import { cookies } from "next/headers";
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    // ✅ Get query params for pagination & filtering
-    const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "10");
-    const type = searchParams.get("type"); // "image" or "pdf"
+    // ✅ Get data from request body instead of params
+    const body = await request.json();
+    const { page = 1, limit = 12, type, cursor } = body;
     
-    // ✅ Get userId from your Node.js auth backend (CONSISTENT with upload)
+    // ✅ Get userId from your Node.js auth backend
     let userId: string;
     try {
       const cookieStore = await cookies();
@@ -23,7 +21,6 @@ export async function GET(request: NextRequest) {
         throw new Error("No authentication token found");
       }
 
-      // ✅ FIXED: Use same auth endpoint as upload
       const getUserIdApiUrl = `http://localhost:5000/api/auth/profile`;
       const token = cookieValue.value;
 
@@ -44,7 +41,6 @@ export async function GET(request: NextRequest) {
         throw new Error(errorData.message || "Failed to get user ID");
       }
 
-      // ✅ FIXED: Handle both response formats from your updated backend
       userId = userResponse.data?.id || userResponse.data?.user?.id;
       
       if (!userId) {
@@ -66,37 +62,44 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Build Cloudinary Search Expression
-    let expression = `folder=uploads/${userId}`;
+    let expression = `folder:uploads/${userId}`;
     if (type === "image") {
-      expression += " AND resource_type=image";
+      expression += " AND resource_type:image";
     } else if (type === "pdf") {
-      expression += " AND format=pdf";
-    } else {
-      // Only allow image or pdf
-      expression += " AND (resource_type=image OR format=pdf)";
+      expression += " AND resource_type:raw AND format:pdf";
     }
 
-    // ✅ Call Cloudinary API with better error handling
+    console.log("Search expression:", expression);
+
+    // ✅ Simple Cloudinary API call with POST body
     try {
-      const response = await axios.get(
+      const cloudinaryPayload = {
+        expression,
+        max_results: Math.min(limit, 500),
+        ...(cursor && { next_cursor: cursor })
+      };
+
+      console.log("Cloudinary request payload:", cloudinaryPayload);
+
+      const response = await axios.post(
         `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/resources/search`,
+        cloudinaryPayload,
         {
           auth: {
             username: process.env.CLOUDINARY_API_KEY!,
             password: process.env.CLOUDINARY_API_SECRET!,
           },
-          params: {
-            expression,
-            max_results: limit,
-            next_cursor: searchParams.get("cursor") || undefined,
-            sort_by: [["created_at", "desc"]], // ✅ Sort by newest first
+          headers: {
+            'Content-Type': 'application/json'
           },
-          timeout: 10000, // ✅ Add timeout
+          timeout: 15000,
         }
       );
 
-      // ✅ Enhanced file mapping with more metadata
-      const files = response.data.resources.map((file: any) => ({
+      console.log("Cloudinary response status:", response.status);
+      console.log("Found resources:", response.data.resources?.length || 0);
+
+      const files = (response.data.resources || []).map((file: any) => ({
         public_id: file.public_id,
         url: file.secure_url,
         format: file.format,
@@ -104,14 +107,17 @@ export async function GET(request: NextRequest) {
         created_at: file.created_at,
         resource_type: file.resource_type,
         display_name: file.display_name || file.public_id.split('/').pop(),
+        width: file.width || null,
+        height: file.height || null,
       }));
 
       return NextResponse.json({
         files,
-        total_count: response.data.total_count || files.length,
+        total_count: response.data.total_count || 0,
         next_cursor: response.data.next_cursor || null,
         page,
         limit,
+        has_more: !!response.data.next_cursor,
       }, { status: 200 });
 
     } catch (cloudinaryError) {
@@ -119,18 +125,36 @@ export async function GET(request: NextRequest) {
       
       if (axios.isAxiosError(cloudinaryError)) {
         const status = cloudinaryError.response?.status || 500;
-        const message = cloudinaryError.response?.data?.error?.message || "Failed to fetch files from Cloudinary";
-        return NextResponse.json({ message }, { status });
+        const errorData = cloudinaryError.response?.data;
+        
+        console.error("Cloudinary error details:", {
+          status,
+          data: errorData,
+          message: cloudinaryError.message,
+        });
+        
+        const message = errorData?.error?.message || 
+                       errorData?.message || 
+                       `Cloudinary API error: ${cloudinaryError.message}`;
+        
+        return NextResponse.json({ 
+          message,
+          error: process.env.NODE_ENV === "development" ? errorData : undefined
+        }, { status });
       }
       
-      return NextResponse.json({ message: "Failed to fetch files" }, { status: 500 });
+      return NextResponse.json({ message: "Failed to fetch files from Cloudinary" }, { status: 500 });
     }
 
   } catch (error: any) {
-    console.error("Cloudinary Fetch Error:", error);
+    console.error("General Fetch Error:", error);
     return NextResponse.json({ 
       message: "Internal Server Error",
       error: process.env.NODE_ENV === "development" ? error.message : undefined
     }, { status: 500 });
   }
+}
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200 });
 }

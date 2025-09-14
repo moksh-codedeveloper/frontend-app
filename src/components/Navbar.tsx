@@ -83,7 +83,7 @@ export function Navbar() {
           <Link href="/" passHref>
             <Button variant="ghost">Home</Button>
           </Link>
-          <Link href="/" passHref>
+          <Link href="/files" passHref>
             <Button variant="ghost">Files</Button>
           </Link>
           <Link href="/" passHref>
