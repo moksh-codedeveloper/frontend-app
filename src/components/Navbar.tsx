@@ -86,7 +86,7 @@ export function Navbar() {
           <Link href="/files" passHref>
             <Button variant="ghost">Files</Button>
           </Link>
-          <Link href="/" passHref>
+          <Link href="/profile" passHref>
             <Button variant="ghost">Profile</Button>
           </Link>
 

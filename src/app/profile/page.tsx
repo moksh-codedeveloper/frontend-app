@@ -39,6 +39,7 @@ export default function ProfilePage() {
     } catch (err: any) {
       setError("Failed to load profile");
       toast.error(err.response?.data?.message || err.message || "An error occurred");
+      router.push("/login");
     } finally {
       setLoading(false);
     }
