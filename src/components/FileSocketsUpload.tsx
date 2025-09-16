@@ -4,14 +4,14 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export default function FileUploadSection({ onUploadSuccess }: { onUploadSuccess?: () => void }) {
+export default function FileUploadSocket({ onUploadSuccess }: { onUploadSuccess?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
 
   useEffect(() => {
     // Initialize WebSocket connection
-    const socket = new WebSocket("ws://localhost:8000/ws/files/");
+    const socket = new WebSocket("ws://localhost:3000/ws/files/");
     socketRef.current = socket;
 
     socket.onopen = () => {
