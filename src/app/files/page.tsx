@@ -13,8 +13,6 @@ import { Input } from "@/components/ui/input";
 import { 
   FileText, 
   Image as ImageIcon, 
-  Download, 
-  Eye, 
   Search,
   Filter,
   RefreshCw,
@@ -93,55 +91,54 @@ export default function FileViewer() {
   };
 
   const fetchFiles = useCallback(async (nextCursor: string | null = null, reset: boolean = false) => {
-  setLoading(true);
-  setError(null);
+    setLoading(true);
+    setError(null);
 
-  const payload = {
-    limit: 12,
-    type: type === "all" ? undefined : type,
-    cursor: nextCursor || undefined,
-    page: 1,
-  };
+    const payload = {
+      limit: 12,
+      type: type === "all" ? undefined : type,
+      cursor: nextCursor || undefined,
+      page: 1,
+    };
 
-  try {
-    const res = await axios.post('/api/cloudinary_fetch', payload, {
-      withCredentials: true,
-      timeout: 30000,
-    });
+    try {
+      const res = await axios.post('/api/cloudinary_fetch', payload, {
+        withCredentials: true,
+        timeout: 30000,
+      });
 
-    const data: FetchResponse = res.data;
+      const data: FetchResponse = res.data;
 
-    if (reset) {
-      setFiles(data.files || []);
-    } else {
-      setFiles((prev) => [...prev, ...(data.files || [])]);
-    }
-    
-    setCursor(data.next_cursor || null);
-    setTotalCount(data.total_count || 0);
-    setHasMore(data.has_more || false);
-    setRetryCount(0);
-
-  } catch (err: any) {
-    console.error("Error fetching files:", err);
-    let errorMessage = "Failed to load files. Please try again.";
-    if (axios.isAxiosError(err)) {
-      if (err.code === 'ECONNABORTED') {
-        errorMessage = "Request timed out. Please check your connection and try again.";
-      } else if (err.response?.status === 401) {
-        errorMessage = "Authentication failed. Please refresh the page and try again.";
-      } else if (err.response?.status === 400) {
-        errorMessage = `Bad request: ${err.response.data?.message || 'Invalid parameters'}`;
-      } else if (err.response?.data?.message) {
-        errorMessage = err.response.data.message;
+      if (reset) {
+        setFiles(data.files || []);
+      } else {
+        setFiles((prev) => [...prev, ...(data.files || [])]);
       }
-    }
-    setError(errorMessage);
-  } finally {
-    setLoading(false);
-  }
-}, [type]);
+      
+      setCursor(data.next_cursor || null);
+      setTotalCount(data.total_count || 0);
+      setHasMore(data.has_more || false);
+      setRetryCount(0);
 
+    } catch (err: any) {
+      console.error("Error fetching files:", err);
+      let errorMessage = "Failed to load files. Please try again.";
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED') {
+          errorMessage = "Request timed out. Please check your connection and try again.";
+        } else if (err.response?.status === 401) {
+          errorMessage = "Authentication failed. Please refresh the page and try again.";
+        } else if (err.response?.status === 400) {
+          errorMessage = `Bad request: ${err.response.data?.message || 'Invalid parameters'}`;
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        }
+      }
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [type]);
 
   // Retry mechanism
   const handleRetry = useCallback(() => {
@@ -156,26 +153,6 @@ export default function FileViewer() {
     file.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     file.public_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Download file
-  const downloadFile = useCallback(async (file: FileItem) => {
-    try {
-      const link = document.createElement('a');
-      link.href = file.url;
-      link.download = file.display_name || `file.${file.format}`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error('Download failed:', err);
-    }
-  }, []);
-
-  // View file in new tab
-  const viewFile = useCallback((file: FileItem) => {
-    window.open(file.url, '_blank');
-  }, []);
 
   useEffect(() => {
     setFiles([]);
@@ -277,12 +254,12 @@ export default function FileViewer() {
                 >
                   <CardContent className="p-4">
                     {/* File Preview */}
-                    <div className="aspect-square mb-3 rounded-lg overflow-hidden bg-gray-700 flex items-center justify-center relative">
+                    <div className="aspect-square mb-3 rounded-lg overflow-hidden bg-gray-700 flex items-center justify-center">
                       {file.resource_type === 'image' ? (
                         <img 
                           src={file.url} 
                           alt={file.display_name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          className="w-full h-full object-cover"
                           loading="lazy"
                         />
                       ) : (
@@ -291,32 +268,6 @@ export default function FileViewer() {
                           <span className="text-xs font-medium">{file.format.toUpperCase()}</span>
                         </div>
                       )}
-                      
-                      {/* Hover Actions */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            viewFile(file);
-                          }}
-                          className="bg-white/20 hover:bg-white/30 text-white border-0"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            downloadFile(file);
-                          }}
-                          className="bg-white/20 hover:bg-white/30 text-white border-0"
-                        >
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
                     </div>
 
                     {/* File Info */}
@@ -393,7 +344,7 @@ export default function FileViewer() {
         </CardContent>
       </Card>
 
-      {/* File Details Modal */}
+      {/* File Details Modal - Simplified */}
       {selectedFile && (
         <div 
           className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
@@ -445,24 +396,6 @@ export default function FileViewer() {
                       <p><span className="font-medium">Dimensions:</span> {selectedFile.width} × {selectedFile.height}px</p>
                     )}
                   </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => viewFile(selectedFile)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Eye className="w-4 h-4 mr-2" />
-                    View
-                  </Button>
-                  <Button
-                    onClick={() => downloadFile(selectedFile)}
-                    variant="outline"
-                    className="flex-1 border-gray-600 text-gray-300 hover:bg-gray-700"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download
-                  </Button>
                 </div>
               </div>
             </div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import FileUploadSection from "@/components/FileUpload";
-import FileUploadSocket from "./FileSocketsUpload";
+// import FileUploadSocket from "./FileSocketsUpload";
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -43,11 +43,11 @@ export default function Dashboard() {
             toast.success("Files uploaded successfully!");
           }}
         />
-        <FileUploadSocket
+        {/* <FileUploadSocket
           onUploadSuccess={() => {
             toast.success("Files uploaded successfully via WebSocket!");
           }}
-        />
+        /> */}
       </div>
     </div>
   );
