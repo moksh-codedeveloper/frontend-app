@@ -13,7 +13,7 @@ function ScanButton() {
 
       const id = userID.data.id || userID.data.user?.id;
       const response = await axios.post(
-        "http://localhost:8000/image/fetch_data/",
+        "http://localhost:8000/fetch/images/",
         {
           id: id,
         },
