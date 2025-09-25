@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
-
+import ScanButton from "@/components/ScanButton";
 interface CloudinaryFile {
   public_id: string;
   url: string;
@@ -73,6 +73,7 @@ export default function GalleryPage() {
           </Card>
         ))}
       </div>
+      <ScanButton/>
     </div>
   );
 }
