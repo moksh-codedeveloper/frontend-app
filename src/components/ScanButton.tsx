@@ -13,7 +13,7 @@ function ScanButton() {
 
       const id = userID.data.id || userID.data.user?.id;
       const response = await axios.post(
-        "http://localhost:8000/fetch/images/",
+        "http://localhost:8000/fetch/images/scan/",
         {
           id: id,
         },
@@ -21,7 +21,6 @@ function ScanButton() {
           withCredentials: true,
         }
       );
-
       setData(response.data);
     } catch (error: any) {
       console.log(error.message);
@@ -34,7 +33,7 @@ function ScanButton() {
       </Button>
       <CardContent className="mt-4">
         <CardDescription className="bg-black text-white rounded-xl p-3 border border-cyan-500/30 shadow-inner transition-all duration-300 hover:border-cyan-400">
-            {data || "Loading"}
+            {data ? JSON.stringify(data, null, 2) : "Loading"}
         </CardDescription>
       </CardContent>
     </Card>
