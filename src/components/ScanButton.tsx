@@ -12,16 +12,10 @@ function ScanButton() {
       });
 
       const id = userID.data.id || userID.data.user?.id;
-      const response = await axios.post(
-        "http://localhost:8000/fetch/images/scan/",
-        {
-          id: id,
-        },
-        {
-          withCredentials: true,
-        }
+      const response = await axios.get(
+        `http://localhost:8000/scan/${id}`
       );
-      setData(response.data);
+      setData(response.data?.url);
     } catch (error: any) {
       console.log(error.message);
     }
