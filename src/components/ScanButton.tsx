@@ -15,7 +15,7 @@ function ScanButton() {
       const response = await axios.get(
         `http://localhost:8000/scan/${id}`
       );
-      setData(response.data?.url);
+      setData(response.data);
     } catch (error: any) {
       console.log(error.message);
     }
